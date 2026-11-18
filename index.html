@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Waypoint</title>
+  <meta name="theme-color" content="#0B1B2B">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2.5C11 2.5 7 6.4 7 11.2 7 17.5 16 26 16 26s9-8.5 9-14.8C25 6.4 21 2.5 16 2.5z' fill='%236AB0AF' stroke='%231E3535' stroke-width='2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='11.2' r='3.2' fill='%23FFF2A5' stroke='%231E3535' stroke-width='2'/%3E%3Cpath d='M5 29.5h22' stroke='%23F5A89A' stroke-width='2.2' stroke-linecap='round' stroke-dasharray='0.1 4.6'/%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Icons -->
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-logo" viewBox="0 0 32 32">
+      <path d="M16 2.5C11 2.5 7 6.4 7 11.2 7 17.5 16 26 16 26s9-8.5 9-14.8C25 6.4 21 2.5 16 2.5z" fill="#6AB0AF" stroke="#1E3535" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="16" cy="11.2" r="3.2" fill="#FFD27A" stroke="#1E3535" stroke-width="2"/>
+      <path d="M5 29.5h22" fill="none" stroke="#F5A89A" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="0.1 4.6"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></symbol>
+    <symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H17a3.5 3.5 0 0 0 0-7H7a3.5 3.5 0 0 1 0-7h8.5"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M16 15h2"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 5v15M3 16h18v4M21 16v-3a3 3 0 0 0-3-3h-8v6"/><circle cx="6.5" cy="12" r="1.5"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6h-3M7 14h10v7H7z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12h.01"/></symbol>
+    <symbol id="i-crosshair" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5L21.5 20h-19z"/><path d="M12 10v5M12 17.5h.01"/></symbol>
+    <symbol id="i-umbrella" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 18 0z"/><path d="M12 12v6a2 2 0 0 1-4 0"/></symbol>
+    <symbol id="i-droplet" viewBox="0 0 24 24"><path d="M12 3s6 6.2 6 10.5a6 6 0 0 1-12 0C6 9.2 12 3 12 3z"/></symbol>
+    <symbol id="i-wind" viewBox="0 0 24 24"><path d="M3 8h10.5a2.5 2.5 0 1 0-2.5-2.5M3 12h15a3 3 0 1 1-3 3M3 16h6"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+    <!-- Weather icons -->
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" fill="#FFD27A"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></symbol>
+    <symbol id="i-cloud-sun" viewBox="0 0 24 24"><circle cx="8" cy="8.5" r="3" fill="#FFD27A"/><path d="M8 2.5V4M2.5 8.5H4M4.1 4.6l1 1M11.9 4.6l-1 1"/><path d="M9.5 20h8a3.5 3.5 0 0 0 .4-7 5 5 0 0 0-9.6 1.2A3 3 0 0 0 9.5 20z" fill="#24445F"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7.5 19h9.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6 10.7 4.2 4.2 0 0 0 7.5 19z" fill="#24445F"/></symbol>
+    <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7.5 15h9.5a3.5 3.5 0 0 0 .5-6.96A5.5 5.5 0 0 0 6.6 9 3.8 3.8 0 0 0 7.5 15z" fill="#24445F"/><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3" stroke="#6AB0AF"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M7.5 15h9.5a3.5 3.5 0 0 0 .5-6.96A5.5 5.5 0 0 0 6.6 9 3.8 3.8 0 0 0 7.5 15z" fill="#24445F"/><path d="M12.5 12l-2.5 4h3l-2 4.5" fill="#FFD27A"/></symbol>
+    <symbol id="i-snow" viewBox="0 0 24 24"><path d="M7.5 15h9.5a3.5 3.5 0 0 0 .5-6.96A5.5 5.5 0 0 0 6.6 9 3.8 3.8 0 0 0 7.5 15z" fill="#24445F"/><path d="M8 18.5h.01M12 19.5h.01M16 18.5h.01M10 22h.01M14 22h.01" stroke-width="2.6" stroke="#6AB0AF"/></symbol>
+    <symbol id="i-mist" viewBox="0 0 24 24"><path d="M4 7h16M3 11.5h18M5 16h14M8 20.5h8"/></symbol>
+  </svg>
+  <!-- Login -->
+  <section id="auth" class="auth" hidden>
+    <div class="auth-card">
+      <div class="brand"><svg class="logo" aria-hidden="true"><use href="#i-logo"/></svg><span>Waypoint</span></div>
+      <h1 id="authTitle">Welcome back</h1>
+      <p class="auth-lead">Log in to pick up where you left off.</p>
+
+      <div id="authSeg" class="seg" role="tablist" aria-label="Log in or create an account">
+        <button type="button" role="tab" data-auth="login" aria-selected="true">Log in</button>
+        <button type="button" role="tab" data-auth="signup" aria-selected="false">Create account</button>
+      </div>
+
+      <form id="authForm" autocomplete="on" novalidate>
+        <div class="field">
+          <label for="authEmail" id="authEmailLabel">Email</label>
+          <div class="input-wrap">
+            <input id="authEmail" type="email" autocomplete="email" required>
+            <span id="authEmailMark" class="field-mark" aria-hidden="true"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="authPass">Password</label>
+          <input id="authPass" type="password" autocomplete="current-password" required>
+        </div>
+        <div id="confirmField" class="field" hidden>
+          <label for="authConfirm">Confirm password</label>
+          <input id="authConfirm" type="password" autocomplete="new-password">
+        </div>
+        <p id="authMsg" class="auth-msg" role="alert" hidden></p>
+        <button id="authSubmit" class="btn primary block" type="submit">Log in</button>
+        <div class="auth-extra">
+          <button id="forgotBtn" class="link-btn" type="button">Forgot password?</button>
+        </div>
+      </form>
+
+      <div class="auth-divider"><span>or</span></div>
+      <button id="guestBtn" class="btn block" type="button"><svg class="ico" aria-hidden="true"><use href="#i-user"/></svg> Continue as guest</button>
+      <p class="auth-note">Guest trips stay on this device.</p>
+    </div>
+  </section>
+
+  <div class="app" hidden>
+
+    <!-- Sidebar: saved trips -->
+    <aside class="rail">
+      <div class="brand"><svg class="logo" aria-hidden="true"><use href="#i-logo"/></svg><span>Waypoint</span></div>
+      <button id="newTripBtn" class="btn primary block" type="button"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg> New trip</button>
+      <nav id="tripList" class="trip-list" aria-label="Saved trips"></nav>
+      <div class="account">
+        <div id="accountId" class="account-id"></div>
+        <div class="account-actions">
+          <button id="themeBtn" class="btn ghost small" type="button"></button>
+          <button id="accountBtn" class="btn small" type="button" hidden><svg class="ico" aria-hidden="true"><use href="#i-user"/></svg> Account</button>
+          <button id="logoutBtn" class="btn ghost small" type="button"><svg class="ico" aria-hidden="true"><use href="#i-logout"/></svg> Log out</button>
+        </div>
+      </div>
+      <div class="rail-foot" id="saveState" aria-live="polite"></div>
+    </aside>
+
+    <main class="stage">
+      <div id="banner" class="banner" hidden></div>
+
+      <!-- Empty state -->
+      <section id="empty" class="empty">
+        <div class="empty-main">
+          <h1>Where to next?</h1>
+          <p class="empty-lead">Pick a place, plan each day, and keep an eye on the weather and your budget.</p>
+          <ol class="steps">
+            <li class="step is-first">
+              <span class="step-num">1</span>
+              <div class="step-body">
+                <h2>Choose a destination</h2>
+                <p>Name your trip and search for a city.</p>
+                <button id="emptyNew" class="btn primary" type="button"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg> New trip</button>
+              </div>
+            </li>
+            <li class="step">
+              <span class="step-num">2</span>
+              <div class="step-body">
+                <h2>Set your dates</h2>
+                <p>Pick a start date and how many days you will be away.</p>
+              </div>
+            </li>
+            <li class="step">
+              <span class="step-num">3</span>
+              <div class="step-body">
+                <h2>Set your budget</h2>
+                <p>Choose your home currency and an optional total budget.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+        <div class="empty-visual" aria-hidden="true">
+          <svg viewBox="0 0 380 480" width="380" height="480" fill="none">
+            <circle cx="262" cy="170" r="92" fill="#FFD27A" opacity=".16"/>
+            <circle cx="262" cy="170" r="58" fill="#FFD27A"/>
+            <path d="M20 340L120 190L180 270L240 200L360 340Z" fill="#2F5A82"/>
+            <path d="M120 190L146 228L128 222L112 236L100 216Z" fill="#F4EBDD"/>
+            <path d="M0 340H380V480H0Z" fill="#11273B"/>
+            <path d="M30 372q15-10 30 0t30 0 30 0 30 0M120 440q15-10 30 0t30 0 30 0 30 0" stroke="#6AB0AF" stroke-width="3" stroke-linecap="round"/>
+            <path d="M30 150C100 120 170 120 236 78" stroke="#F5A89A" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 10"/>
+            <path d="M236 78l62-26-20 62-14-20-24-8z" fill="#F4EBDD"/>
+            <path d="M264 98l-4-16 28-24z" fill="#C9BBA3"/>
+            <rect x="86" y="388" width="116" height="76" rx="12" fill="#F5A89A"/>
+            <path d="M120 388v-14a8 8 0 0 1 8-8h22a8 8 0 0 1 8 8v14" stroke="#F5A89A" stroke-width="6"/>
+            <path d="M118 388v76M170 388v76" stroke="#0F1F1F" stroke-opacity=".25" stroke-width="5"/>
+            <rect x="136" y="416" width="16" height="12" rx="3" fill="#FFD27A"/>
+            <path d="M296 372c-14 0-24 10-24 23 0 15 24 31 24 31s24-16 24-31c0-13-10-23-24-23z" fill="#6AB0AF"/>
+            <circle cx="296" cy="395" r="8" fill="#FFD27A"/>
+          </svg>
+        </div>
+      </section>
+
+      <!-- New trip -->
+      <section id="newPage" class="newpage" hidden>
+        <div class="empty-main">
+        <form id="newForm" autocomplete="off" novalidate>
+          <header class="newpage-head">
+            <button id="newClose" class="icon-btn" type="button" aria-label="Close and go back"><svg class="ico" aria-hidden="true"><use href="#i-close"/></svg></button>
+            <h1>New trip</h1>
+          </header>
+          <ol class="steps">
+            <li class="step current">
+              <span class="step-num">1</span>
+              <div class="step-body">
+                <h2>Choose a destination</h2>
+                <div class="field">
+                  <label for="ntName">Trip name</label>
+                  <input id="ntName" type="text" maxlength="80" placeholder="Trip to ...">
+                </div>
+                <div class="field ac-wrap">
+                  <label for="ntDest">Destination</label>
+                  <input id="ntDest" type="text" placeholder="Search a city or place">
+                  <ul id="ntList" class="ac" hidden></ul>
+                </div>
+                <div class="nt-mapwrap">
+                  <div id="ntMap" class="nt-map" aria-label="Map preview of the destination"></div>
+                  <p id="ntHint" class="nt-hint">The map appears once you pick a place.</p>
+                  <img id="ntPhoto" class="nt-photo" alt="" hidden>
+                </div>
+                <div class="newpage-actions">
+                  <button id="ntNext1" class="btn primary" type="button" data-go="1" disabled>Next</button>
+                </div>
+              </div>
+            </li>
+            <li class="step">
+              <span class="step-num">2</span>
+              <div class="step-body">
+                <h2>Set your dates</h2>
+                <div class="row2">
+                  <div class="field"><label for="ntStart">Start date</label><input id="ntStart" type="date"></div>
+                  <div class="field"><label for="ntDays">Number of days</label><input id="ntDays" type="number" min="1" max="14" value="3"></div>
+                </div>
+                <div id="ntCal" class="cal"></div>
+                <div class="newpage-actions">
+                  <button class="btn ghost" type="button" data-go="0">Back</button>
+                  <button id="ntNext2" class="btn primary" type="button" data-go="2" disabled>Next</button>
+                </div>
+              </div>
+            </li>
+            <li class="step">
+              <span class="step-num">3</span>
+              <div class="step-body">
+                <h2>Set your budget</h2>
+                <div class="row2">
+                  <div class="field"><label for="ntHome">Home currency</label><select id="ntHome"></select></div>
+                  <div class="field"><label for="ntBudget">Total budget (optional)</label><input id="ntBudget" type="number" min="0" step="any" placeholder="0"></div>
+                </div>
+                <div class="newpage-actions">
+                  <button class="btn ghost" type="button" data-go="1">Back</button>
+                  <button id="ntCreate" class="btn primary" type="submit" disabled>Create trip</button>
+                </div>
+              </div>
+            </li>
+          </ol>
+        </form>
+        </div>
+        <div id="ntVisual" class="empty-visual" aria-hidden="true"></div>
+      </section>
+
+      <section id="workspace" hidden>
+        <header class="trip-head">
+          <div class="trip-title">
+            <input id="tripName" class="title-input" type="text" aria-label="Trip name" maxlength="80">
+            <p id="tripSub" class="trip-sub"></p>
+          </div>
+          <div class="trip-actions">
+            <label class="field inline">
+              <span>Travel by</span>
+              <select id="modeSelect">
+                <option value="driving-car">Driving</option>
+                <option value="cycling-regular">Cycling</option>
+                <option value="foot-walking">Walking</option>
+              </select>
+            </label>
+            <button id="printBtn" class="btn ghost" type="button"><svg class="ico" aria-hidden="true"><use href="#i-print"/></svg> Print</button>
+            <button id="deleteTrip" class="btn ghost" type="button"><svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg> Delete trip</button>
+          </div>
+        </header>
+
+        <div class="days-row">
+          <div id="days" class="days" role="tablist" aria-label="Trip days"></div>
+          <div class="day-tools">
+            <button id="addDay" class="btn ghost small" type="button"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg> Add day</button>
+            <button id="removeDay" class="btn ghost small" type="button"><svg class="ico" aria-hidden="true"><use href="#i-minus"/></svg> Remove last day</button>
+          </div>
+        </div>
+
+        <div id="weather" class="weather" aria-live="polite"></div>
+
+        <div class="split">
+          <div class="side">
+            <div id="seg" class="seg" role="tablist" aria-label="Planner sections">
+              <button type="button" role="tab" data-panel="itinerary"><svg class="ico" aria-hidden="true"><use href="#i-route"/></svg> Itinerary</button>
+              <button type="button" role="tab" data-panel="discover"><svg class="ico" aria-hidden="true"><use href="#i-compass"/></svg> Discover</button>
+              <button type="button" role="tab" data-panel="saved"><svg class="ico" aria-hidden="true"><use href="#i-star"/></svg> Saved</button>
+              <button type="button" role="tab" data-panel="budget"><svg class="ico" aria-hidden="true"><use href="#i-wallet"/></svg> Budget</button>
+            </div>
+            <div id="panel" class="panel"></div>
+          </div>
+          <div class="mapwrap">
+            <div id="map" aria-label="Map of the day's stops"></div>
+            <details id="reach" class="reach">
+              <summary><svg class="ico" aria-hidden="true"><use href="#i-target"/></svg> What's within reach? <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
+              <div class="reach-body">
+                <div class="reach-row">
+                  <select id="reachMin" aria-label="Minutes">
+                    <option value="5">5 min</option>
+                    <option value="10">10 min</option>
+                    <option value="15" selected>15 min</option>
+                    <option value="20">20 min</option>
+                    <option value="30">30 min</option>
+                  </select>
+                  <span>from</span>
+                </div>
+                <select id="reachFrom" aria-label="Starting point"></select>
+                <div class="reach-row">
+                  <button id="reachGo" class="btn small primary" type="button">Show area</button>
+                  <button id="reachPickBtn" class="btn small" type="button"><svg class="ico" aria-hidden="true"><use href="#i-crosshair"/></svg> Pick on map</button>
+                  <button id="reachClear" class="btn small ghost" type="button" hidden><svg class="ico" aria-hidden="true"><use href="#i-close"/></svg> Clear</button>
+                </div>
+                <p id="reachNote" class="reach-note"></p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+
+  <!-- Guest import -->
+  <dialog id="importDialog">
+    <h2>Bring your guest trips along?</h2>
+    <p id="importText" class="dialog-lead"></p>
+    <div class="dialog-actions">
+      <button id="importLater" class="btn ghost" type="button">Not now</button>
+      <button id="importGo" class="btn primary" type="button">Copy to my account</button>
+    </div>
+  </dialog>
+
+  <!-- Account -->
+  <dialog id="accountDialog">
+    <h2>Account</h2>
+    <p id="acctEmail" class="dialog-lead"></p>
+
+    <section class="acct-section">
+      <div class="acct-row">
+        <b id="verifyState"></b>
+        <span class="acct-btns">
+          <button id="resendVerify" class="btn small" type="button">Resend email</button>
+          <button id="refreshVerify" class="btn small ghost" type="button">I verified it</button>
+        </span>
+      </div>
+    </section>
+
+    <form id="pwForm" class="acct-section" autocomplete="off">
+      <h3>Change password</h3>
+      <div class="field">
+        <label for="pwCurrent">Current password</label>
+        <input id="pwCurrent" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="pwNew">New password</label>
+          <input id="pwNew" type="password" minlength="6" autocomplete="new-password" required>
+        </div>
+        <div class="field">
+          <label for="pwConfirm">Confirm new</label>
+          <input id="pwConfirm" type="password" minlength="6" autocomplete="new-password" required>
+        </div>
+      </div>
+      <button class="btn" type="submit">Change password</button>
+    </form>
+
+    <form id="delForm" class="acct-section" autocomplete="off">
+      <h3>Delete account</h3>
+      <p class="acct-note">Deletes your account, trips and saved places for good.</p>
+      <div class="field">
+        <label for="delPass">Password</label>
+        <input id="delPass" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn danger" type="submit">Delete my account</button>
+    </form>
+
+    <p id="acctMsg" class="auth-msg" role="alert" hidden></p>
+    <div class="dialog-actions">
+      <button id="closeAccount" class="btn" type="button">Close</button>
+    </div>
+  </dialog>
+
+  <!-- Auto-plan -->
+  <dialog id="planDialog">
+    <form id="planForm" autocomplete="off">
+      <h2 id="planTitle">Auto-plan this day</h2>
+      <p id="planLead" class="dialog-lead"></p>
+
+      <div class="field">
+        <span>What do you feel like?</span>
+        <div id="planCats" class="checks"></div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="planCount">Number of stops</label>
+          <select id="planCount">
+            <option>3</option><option>4</option><option>5</option>
+            <option>6</option><option>7</option><option>8</option>
+          </select>
+        </div>
+        <div class="field" id="planReplaceWrap">
+          <span>This day already has stops</span>
+          <label class="check"><input type="checkbox" id="planReplace"> Replace them</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="check"><input type="checkbox" id="planHideUsed"> Skip places already on other days</label>
+      </div>
+
+      <p id="planMsg" class="auth-msg" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button id="cancelPlan" class="btn ghost" type="button">Cancel</button>
+        <button id="planSubmit" class="btn primary" type="submit">Plan my day</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Place photos -->
+  <dialog id="photoDialog" class="photo-dialog">
+    <h2 id="photoTitle">Photos</h2>
+    <div id="photoBody"></div>
+    <div class="dialog-actions"><button id="closePhotos" class="btn" type="button">Close</button></div>
+  </dialog>
+
+  <div id="printView" class="print-only" aria-hidden="true"></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <!-- Config and app -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -288,10 +288,11 @@
   // Guest import: save imported list
   const importedWrite = o => { try { localStorage.setItem(IMPORTED_KEY, JSON.stringify(o)); } catch {} };
 
-  // Storage: trips (guest or Firestore)
+  // Storage: trips (guest localStorage or Firebase Firestore)
   const store = {
     async list() {
       if (state.guest) return guestRead();
+      // API call: Firebase Firestore (load trips)
       const snap = await db.collection('trips').where('uid', '==', state.uid).get();
       return snap.docs.map(d => ({ id: d.id, ...d.data() }));
     },
@@ -301,6 +302,7 @@
         guestWrite([{ ...trip, id }, ...guestRead()]);
         return id;
       }
+      // API call: Firebase Firestore (add trip)
       const ref = await db.collection('trips').add(trip);
       return ref.id;
     },
@@ -313,29 +315,34 @@
         guestWrite(list);
         return;
       }
+      // API call: Firebase Firestore (save trip)
       await db.collection('trips').doc(id).set(data);
     },
     async remove(id) {
       if (state.guest) { guestWrite(guestRead().filter(x => x.id !== id)); return; }
+      // API call: Firebase Firestore (delete trip)
       await db.collection('trips').doc(id).delete();
     },
   };
 
-  // Storage: favorites (guest or Firestore)
+  // Storage: favorites (guest localStorage or Firebase Firestore)
   const favStore = {
     async load() {
       if (state.guest) return guestFavRead();
+      // API call: Firebase Firestore (load favorites)
       const snap = await db.collection('users').doc(state.uid).get();
       return snap.exists ? (snap.data().favorites || []) : [];
     },
     async save(list) {
       if (state.guest) { guestFavWrite(list); return; }
+      // API call: Firebase Firestore (save favorites)
       await db.collection('users').doc(state.uid).set({ favorites: list }, { merge: true });
     },
   };
 
   // Login: start Firebase
   function initFirebase() {
+    // API call: Firebase (start)
     firebase.initializeApp(CFG.firebase);
     db = firebase.firestore();
     auth = firebase.auth();
@@ -345,14 +352,14 @@
   // Trips list: sort by newest
   const sortTrips = () => state.trips.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
-  // Trips list: load trips
+  // Trips list: load trips (Firebase or guest)
   async function loadTrips() {
     state.trips = await store.list();
     sortTrips();
   }
 
   /* ---------- Login ---------- */
-  // Login: auth state changed
+  // Login: auth state changed (Firebase)
   async function handleAuthChange(user) {
     const initial = !authChecked;
     authChecked = true;
@@ -374,7 +381,7 @@
     else showAuth();
   }
 
-  // Login: start session
+  // Login: start session (loads data from Firebase)
   async function startSession({ uid: id, email, guest, verified = false }) {
     resetWorkspace();
     state.uid = id;
@@ -536,7 +543,7 @@
     return false;
   }
 
-  // Sign up / Login
+  // Sign up / Login (Firebase Auth)
   async function submitAuth(e) {
     e.preventDefault();
     if (!auth) {
@@ -554,14 +561,17 @@
     setAuthBusy(true);
     try {
       if (authMode === 'signup') {
+        // API call: Firebase Auth (sign up)
         const cred = await auth.createUserWithEmailAndPassword(email, pass);
         try {
+          // API call: Firebase Auth (verification email)
           await cred.user.sendEmailVerification();
           toast('Verification email sent.');
         } catch {
           toast('Verification email not sent. Resend it from Account.');
         }
       } else {
+        // API call: Firebase Auth (log in)
         await auth.signInWithEmailAndPassword(email, pass);
       }
     } catch (err) {
@@ -571,13 +581,14 @@
     }
   }
 
-  // Login: forgot password
+  // Login: forgot password (Firebase Auth)
   async function resetPassword() {
     if (!auth) { showAuthMsg('Login unavailable. Check Firebase in config.js.'); return; }
     const email = $('#authEmail').value.trim();
     if (!email) { showAuthMsg('Enter your email first.'); return; }
     if (!checkEmail(true)) { $('#authEmail').focus(); return; }
     try {
+      // API call: Firebase Auth (password reset email)
       await auth.sendPasswordResetEmail(email);
       showAuthMsg('If that account exists, a reset link is on its way.', 'ok');
     } catch (err) {
@@ -596,7 +607,7 @@
     await startSession({ uid: 'guest', email: '', guest: true });
   }
 
-  // Logout
+  // Logout (Firebase Auth)
   async function leaveSession() {
     clearTimeout(saveTimer);
     if (savePending) await saveTrip();
@@ -709,9 +720,10 @@
     $('#accountDialog').showModal();
   }
 
-  // Account: resend verification email
+  // Account: resend verification email (Firebase Auth)
   async function resendVerification() {
     try {
+      // API call: Firebase Auth (resend verification email)
       await auth.currentUser.sendEmailVerification();
       acctMsg('Verification email sent.', 'ok');
     } catch (err) {
@@ -719,7 +731,7 @@
     }
   }
 
-  // Account: re-check verification
+  // Account: re-check verification (Firebase Auth)
   async function refreshVerification() {
     try {
       await auth.currentUser.reload();
@@ -730,14 +742,15 @@
     }
   }
 
-  // Account: re-check password
+  // Account: re-check password (Firebase Auth)
   async function reauth(pass) {
     const u = auth.currentUser;
     const cred = firebase.auth.EmailAuthProvider.credential(u.email, pass);
+    // API call: Firebase Auth (re-check password)
     await u.reauthenticateWithCredential(cred);
   }
 
-  // Account: change password
+  // Account: change password (Firebase Auth)
   async function changePassword(e) {
     e.preventDefault();
     const cur = $('#pwCurrent').value;
@@ -748,6 +761,7 @@
     setAcctBusy(true);
     try {
       await reauth(cur);
+      // API call: Firebase Auth (change password)
       await auth.currentUser.updatePassword(next);
       $('#pwForm').reset();
       acctMsg('Password changed.', 'ok');
@@ -758,16 +772,17 @@
     }
   }
 
-  // Account: delete all data
+  // Account: delete all data (Firebase Firestore)
   async function deleteAllUserData() {
     const snap = await db.collection('trips').where('uid', '==', state.uid).get();
+    // API call: Firebase Firestore (delete all user data)
     const batch = db.batch();
     snap.docs.forEach(d => batch.delete(d.ref));
     batch.delete(db.collection('users').doc(state.uid));
     await batch.commit();
   }
 
-  // Account: delete account
+  // Account: delete account (Firebase Auth + Firestore)
   async function deleteAccount(e) {
     e.preventDefault();
     const pass = $('#delPass').value;
@@ -777,6 +792,7 @@
     try {
       await reauth(pass);
       await deleteAllUserData();
+      // API call: Firebase Auth (delete account)
       await auth.currentUser.delete();
       $('#accountDialog').close();
       resetWorkspace();
@@ -805,7 +821,7 @@
     saveTimer = setTimeout(saveTrip, 600);
   }
 
-  // Saving: write trip
+  // Saving: write trip (Firebase Firestore)
   async function saveTrip() {
     savePending = false;
     const t = state.trip;
@@ -833,7 +849,7 @@
   }
 
   /* ---------- Place search ---------- */
-  // New trip: destination autocomplete
+  // New trip: destination autocomplete (Geoapify)
   function setupAutocomplete(input, list, onPick) {
     let timer = null;
     let seq = 0;
@@ -846,6 +862,7 @@
       timer = setTimeout(async () => {
         const mine = ++seq;
         try {
+          // API call: Geoapify (destination autocomplete)
           const data = await getJSON(
             `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(q)}&limit=5&apiKey=${CFG.geoapify}`);
           if (mine !== seq) return;
@@ -881,13 +898,14 @@
   }
 
   /* ---------- Weather ---------- */
-  // Weather: load forecast
+  // Weather: load forecast (OpenWeatherMap)
   async function loadForecast() {
     const t = state.trip;
     state.forecast = null;
     state.forecastError = null;
     renderWeather();
     try {
+      // API call: OpenWeatherMap (5-day forecast)
       const d = await getJSON(
         `https://api.openweathermap.org/data/2.5/forecast?lat=${t.destination.lat}&lon=${t.destination.lon}&units=metric&appid=${CFG.openweather}`);
       const byDate = {};
@@ -923,12 +941,13 @@
   const isWet = w => !!w && (w.pop >= 0.5 || WET_CONDITIONS.includes(w.main));
 
   /* ---------- Exchange rates ---------- */
-  // Budget: load exchange rates
+  // Budget: load exchange rates (ExchangeRate-API)
   async function loadRates() {
     const base = state.trip.homeCurrency;
     state.ratesError = null;
     if (state.ratesCache[base]) { state.rates = state.ratesCache[base]; return; }
     try {
+      // API call: ExchangeRate-API (currency rates)
       const d = await getJSON(`https://v6.exchangerate-api.com/v6/${CFG.exchange}/latest/${base}`);
       if (d.result !== 'success') throw new Error(d['error-type'] || 'Request failed');
       state.rates = { base, rates: d.conversion_rates, updated: d.time_last_update_utc };
@@ -949,7 +968,7 @@
     return { lat: d.lat, lon: d.lon, label: d.name };
   }
 
-  // Find places: format a result
+  // Find places: format a result (Geoapify)
   function normalizePlace(f) {
     const p = f.properties;
     const cats = p.categories || [];
@@ -965,7 +984,7 @@
     };
   }
 
-  // Find places: search
+  // Find places: search (Geoapify)
   async function discover() {
     const c = discoverCenter();
     const mine = ++placesSeq;
@@ -975,6 +994,7 @@
     try {
       const cats = state.category === 'all' ? CATEGORIES.map(x => x.id).join(',') : state.category;
       const q = state.query.trim();
+      // API call: Geoapify (nearby places)
       const url = `https://api.geoapify.com/v2/places?categories=${encodeURIComponent(cats)}`
         + (q.length >= 2 ? `&name=${encodeURIComponent(q)}` : '')
         + `&filter=circle:${c.lon},${c.lat},${state.radius}&bias=proximity:${c.lon},${c.lat}&limit=20&apiKey=${CFG.geoapify}`;
@@ -1005,7 +1025,7 @@
     discover();
   }
 
-  // Routing: API headers
+  // Routing: API headers (OpenRouteService)
   const orsHeaders = () => ({
     Authorization: CFG.ors,
     'Content-Type': 'application/json',
@@ -1046,13 +1066,14 @@
     for (let d = 1; d <= t.days; d++) requestRoute(d, (d - 1) * 300);
   }
 
-  // Routing: get route from API
+  // Routing: get route from API (OpenRouteService)
   async function updateRoute(day) {
     const t = state.trip;
     const pts = routePoints(day);
     if (pts.length < 2) return;
     const mine = (routeSeq[day] = (routeSeq[day] || 0) + 1);
     try {
+      // API call: OpenRouteService (directions / route)
       const d = await getJSON(`https://api.heigit.org/openrouteservice/v2/directions/${t.mode}/geojson`, {
         method: 'POST',
         headers: orsHeaders(),
@@ -1076,13 +1097,14 @@
     renderMap();
   }
 
-  // Optimize order: algorithm
+  // Optimize order: algorithm (OpenRouteService matrix)
   async function reorderByTravelTime(day) {
     const stops = dayStops(day);
     const hotel = state.trip.hotel;
     const pts = hotel ? [hotel, ...stops] : stops;
     if (pts.length < 3) return null;
 
+    // API call: OpenRouteService (travel-time matrix)
     const d = await getJSON(`https://api.heigit.org/openrouteservice/v2/matrix/${state.trip.mode}`, {
       method: 'POST',
       headers: orsHeaders(),
@@ -1158,7 +1180,7 @@
     return { lat: t.destination.lat, lon: t.destination.lon, label: t.destination.name };
   }
 
-  // Within reach: show area
+  // Within reach: show area (OpenRouteService)
   async function showReach() {
     if (!state.trip || state.reachBusy) return;
     const t = state.trip;
@@ -1167,6 +1189,7 @@
     state.reachBusy = true;
     renderReachUI();
     try {
+      // API call: OpenRouteService (reachable area)
       const d = await getJSON(`https://api.heigit.org/openrouteservice/v2/isochrones/${t.mode}`, {
         method: 'POST',
         headers: orsHeaders(),
@@ -1557,7 +1580,7 @@
     $('#planDialog').showModal();
   }
 
-  // Auto-plan: plan the day
+  // Auto-plan: plan the day (Geoapify + OpenRouteService)
   async function runAutoPlan(e) {
     e.preventDefault();
     if (state.planBusy) return;
@@ -1579,6 +1602,7 @@
       const taken = new Set(t.stops.filter(s => !(replace && s.day === day) && (state.hideUsed || s.day === day)).map(s => s.placeId));
       const pools = [];
       for (const c of cats) {
+        // API call: Geoapify (places for auto-plan)
         const url = `https://api.geoapify.com/v2/places?categories=${encodeURIComponent(c)}`
           + `&filter=circle:${center.lon},${center.lat},${radius}&bias=proximity:${center.lon},${center.lat}&limit=20&apiKey=${CFG.geoapify}`;
         const data = await getJSON(url);
@@ -1674,6 +1698,7 @@
   // Trip photo: get from Wikipedia
   async function fetchPhoto(name) {
     try {
+      // API call: Wikipedia (destination photo)
       const d = await getJSON(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(String(name).replace(/ /g, '_'))}`);
       const src = d.thumbnail && d.thumbnail.source;
       return src ? src.replace(/\/\d+px-/, '/960px-') : '';
@@ -2077,7 +2102,8 @@
   }
 
   /* ---------- Map ---------- */
-  // Map: tile layer
+  // Map: tile layer (Geoapify)
+  // API call: Geoapify (map tiles)
   const tiles = () => L.tileLayer(`https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${CFG.geoapify}`, {
     maxZoom: 19,
     attribution: 'Powered by <a href="https://www.geoapify.com/">Geoapify</a> | &copy; OpenMapTiles &copy; OpenStreetMap contributors',
@@ -2144,7 +2170,7 @@
     return div;
   }
 
-  // Map: popup photos
+  // Map: popup photos (Wikimedia Commons)
   async function fillStopPhotos(s, node, marker) {
     const box = node.querySelector('.pop-photo');
     if (box.dataset.done) return;
@@ -2426,6 +2452,7 @@
   async function loadPlacePhotos(p) {
     const key = `${(+p.lat).toFixed(4)},${(+p.lon).toFixed(4)}`;
     if (photoCache[key]) return photoCache[key];
+    // API call: Wikimedia Commons (place photos)
     const d = await getJSON('https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=geosearch'
       + `&ggscoord=${p.lat}%7C${p.lon}&ggsradius=400&ggslimit=40&ggsnamespace=6&prop=imageinfo`
       + '&iiprop=url%7Cmime%7Cextmetadata&iiurlwidth=960&iiextmetadatafilter=Artist%7CLicenseShortName');
@@ -2451,7 +2478,7 @@
     return (photoCache[key] = items);
   }
 
-  // Photos: open gallery
+  // Photos: open gallery (Wikimedia Commons)
   async function openPhotos(p) {
     if (!p) return;
     $('#photoTitle').textContent = p.name;
@@ -2467,7 +2494,7 @@
     renderPhotos();
   }
 
-  // Photos: render gallery
+  // Photos: render gallery (Wikimedia Commons)
   function renderPhotos() {
     const n = ph.items.length;
     if (!n) { $('#photoBody').innerHTML = '<p class="empty-note">No community photos found near this place on Wikimedia Commons yet.</p>'; return; }

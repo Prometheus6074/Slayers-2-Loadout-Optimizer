@@ -110,22 +110,30 @@
   const routeSeq = {};
 
   /* ---------- Helpers ---------- */
+  // Helper: escape HTML
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // Helper: random id
   const uid = () => Math.random().toString(36).slice(2, 10);
+  // Helper: add leading zero
   const pad = n => String(n).padStart(2, '0');
+  // Helper: date to YYYY-MM-DD
   const toISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
+  // Itinerary: date of a trip day
   function dateFor(day) {
     const d = new Date(state.trip.startDate + 'T12:00:00');
     d.setDate(d.getDate() + day - 1);
     return d;
   }
+  // Helper: format date
   const fmtDate = (d, opts) => d.toLocaleDateString(undefined, opts);
 
+  // Helper: format distance
   function fmtDist(m) {
     return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`;
   }
+  // Helper: format duration
   function fmtDur(s) {
     const mins = Math.round(s / 60);
     if (mins < 60) return `${mins} min`;
@@ -133,6 +141,7 @@
     const m = mins % 60;
     return m ? `${h} h ${m} min` : `${h} h`;
   }
+  // Budget: format currency
   function money(v, code) {
     try {
       return new Intl.NumberFormat(undefined, { style: 'currency', currency: code }).format(v);
@@ -141,6 +150,7 @@
     }
   }
 
+  // Helper: distance between two points (haversine)
   function distanceM(aLat, aLon, bLat, bLon) {
     const rad = x => x * Math.PI / 180;
     const dLat = rad(bLat - aLat);
@@ -149,6 +159,7 @@
     return 2 * 6371000 * Math.asin(Math.sqrt(h));
   }
 
+  // Helper: fetch JSON from an API
   async function getJSON(url, opts) {
     const res = await fetch(url, opts);
     let data = null;
@@ -161,6 +172,7 @@
     return data;
   }
 
+  // UI: pop-up message
   function toast(msg, undo) {
     const el = document.createElement('div');
     el.className = 'toast';
@@ -179,15 +191,19 @@
     setTimeout(() => el.remove(), undo ? 8000 : 5500);
   }
 
+  // Itinerary: stops of a day
   const dayStops = (day = state.day) => (state.trip ? state.trip.stops.filter(s => s.day === day) : []);
+  // Itinerary: find stop by id
   const stopById = id => (state.trip ? state.trip.stops.find(s => s.id === id) : null);
 
+  // Itinerary: save new stop order
   function setDayOrder(day, ordered) {
     const idxs = [];
     state.trip.stops.forEach((s, i) => { if (s.day === day) idxs.push(i); });
     idxs.forEach((idx, k) => { state.trip.stops[idx] = ordered[k]; });
   }
 
+  // Routing: points of a day's route
   function routePoints(day = state.day) {
     const stops = dayStops(day);
     if (!stops.length) return [];
@@ -196,11 +212,15 @@
   }
 
   const EXP_CATS = [['food', 'Food'], ['transport', 'Transport'], ['tickets', 'Tickets'], ['stay', 'Stay'], ['other', 'Other']];
+  // Budget: expense category lookup
   const catOf = id => EXP_CATS.find(c => c[0] === id) || EXP_CATS[4];
 
+  // Schedule: time to minutes
   const toMin = s => { const [h, m] = String(s || '09:00').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+  // Schedule: minutes to time
   const fmtClock = m => { const d = ((Math.round(m) % 1440) + 1440) % 1440; return `${pad(Math.floor(d / 60))}:${pad(d % 60)}`; };
 
+  // Schedule: arrive/leave times
   function schedule(day) {
     const stops = dayStops(day);
     const legs = state.legs[day] || [];
@@ -219,9 +239,12 @@
   }
 
   /* ---------- Config ---------- */
+  // Setup: check API key
   const isPlaceholder = v => !v || /^YOUR_/.test(v);
+  // Setup: check Firebase keys
   const firebaseReady = () => !!(CFG.firebase && !isPlaceholder(CFG.firebase.apiKey) && !isPlaceholder(CFG.firebase.projectId));
 
+  // Setup: list missing keys
   function missingKeys() {
     const names = { geoapify: 'Geoapify', openweather: 'OpenWeatherMap', ors: 'OpenRouteService', exchange: 'ExchangeRate-API' };
     const out = Object.keys(names).filter(k => isPlaceholder(CFG[k])).map(k => names[k]);
@@ -229,6 +252,7 @@
     return out;
   }
 
+  // Setup: warning banner
   function showBanner(message) {
     const el = $('#banner');
     const missing = missingKeys();
@@ -249,14 +273,22 @@
   const IMPORTED_KEY = 'waypoint.imported';
   const MODE_KEY = 'waypoint.mode';
 
+  // Guest mode: read saved mode
   const readMode = () => { try { return localStorage.getItem(MODE_KEY); } catch { return null; } };
+  // Guest mode: load trips
   const guestRead = () => { try { return JSON.parse(localStorage.getItem(GUEST_KEY)) || []; } catch { return []; } };
+  // Guest mode: save trips
   const guestWrite = list => localStorage.setItem(GUEST_KEY, JSON.stringify(list));
+  // Guest mode: load favorites
   const guestFavRead = () => { try { return JSON.parse(localStorage.getItem(GUEST_FAV_KEY)) || []; } catch { return []; } };
+  // Guest mode: save favorites
   const guestFavWrite = list => localStorage.setItem(GUEST_FAV_KEY, JSON.stringify(list));
+  // Guest import: read imported list
   const importedRead = () => { try { return JSON.parse(localStorage.getItem(IMPORTED_KEY)) || {}; } catch { return {}; } };
+  // Guest import: save imported list
   const importedWrite = o => { try { localStorage.setItem(IMPORTED_KEY, JSON.stringify(o)); } catch {} };
 
+  // Storage: trips (guest or Firestore)
   const store = {
     async list() {
       if (state.guest) return guestRead();
@@ -289,6 +321,7 @@
     },
   };
 
+  // Storage: favorites (guest or Firestore)
   const favStore = {
     async load() {
       if (state.guest) return guestFavRead();
@@ -301,6 +334,7 @@
     },
   };
 
+  // Login: start Firebase
   function initFirebase() {
     firebase.initializeApp(CFG.firebase);
     db = firebase.firestore();
@@ -308,14 +342,17 @@
     auth.onAuthStateChanged(handleAuthChange);
   }
 
+  // Trips list: sort by newest
   const sortTrips = () => state.trips.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
+  // Trips list: load trips
   async function loadTrips() {
     state.trips = await store.list();
     sortTrips();
   }
 
   /* ---------- Login ---------- */
+  // Login: auth state changed
   async function handleAuthChange(user) {
     const initial = !authChecked;
     authChecked = true;
@@ -331,11 +368,13 @@
     }
   }
 
+  // Login: resume guest or show login
   function resumeOrShowAuth() {
     if (readMode() === 'guest') startSession({ uid: 'guest', email: '', guest: true });
     else showAuth();
   }
 
+  // Login: start session
   async function startSession({ uid: id, email, guest, verified = false }) {
     resetWorkspace();
     state.uid = id;
@@ -366,6 +405,7 @@
     if (!guest) offerImport();
   }
 
+  // Logout: clear workspace
   function resetWorkspace() {
     clearTimeout(saveTimer);
     clearTimeout(searchTimer);
@@ -396,6 +436,7 @@
     setSaveState('');
   }
 
+  // Login: show login screen
   function showAuth() {
     if (!$('#auth').hidden) return;
     $('.app').hidden = true;
@@ -405,6 +446,7 @@
     setAuthMode('login');
   }
 
+  // Account: show user info
   function renderAccount() {
     $('#accountId').textContent = state.guest
       ? 'Guest, this device only'
@@ -413,6 +455,7 @@
     $('#accountBtn').hidden = state.guest;
   }
 
+  // Login: switch login / sign up
   function setAuthMode(mode) {
     authMode = mode;
     const signup = mode === 'signup';
@@ -431,6 +474,7 @@
     showAuthMsg('');
   }
 
+  // Login: show message
   function showAuthMsg(text, kind = 'error') {
     const el = $('#authMsg');
     el.textContent = text || '';
@@ -438,6 +482,7 @@
     el.hidden = !text;
   }
 
+  // Login: error messages
   function authMessage(e) {
     switch (e && e.code) {
       case 'auth/invalid-email': return 'Not a valid email';
@@ -458,6 +503,7 @@
     }
   }
 
+  // Login: disable buttons while busy
   function setAuthBusy(busy) {
     $('#authSubmit').disabled = busy;
     $('#guestBtn').disabled = busy;
@@ -465,6 +511,7 @@
 
   const EMAIL_RE = /^[^\s@,;]+@(?:[\p{L}\p{N}-]+\.)+\p{L}{2,}$/u;
 
+  // Login: email check mark
   function setEmailState(kind, label) {
     const input = $('#authEmail');
     const field = input.closest('.field');
@@ -474,8 +521,10 @@
     if (kind === 'bad') input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
   }
 
+  // Login: clear email check mark
   const clearEmailState = () => setEmailState(null);
 
+  // Login: validate email
   function checkEmail(force = false) {
     const v = $('#authEmail').value.trim();
     if (!v) {
@@ -487,6 +536,7 @@
     return false;
   }
 
+  // Sign up / Login
   async function submitAuth(e) {
     e.preventDefault();
     if (!auth) {
@@ -521,6 +571,7 @@
     }
   }
 
+  // Login: forgot password
   async function resetPassword() {
     if (!auth) { showAuthMsg('Login unavailable. Check Firebase in config.js.'); return; }
     const email = $('#authEmail').value.trim();
@@ -534,6 +585,7 @@
     }
   }
 
+  // Guest mode: start
   async function continueAsGuest() {
     try {
       localStorage.setItem(MODE_KEY, 'guest');
@@ -544,6 +596,7 @@
     await startSession({ uid: 'guest', email: '', guest: true });
   }
 
+  // Logout
   async function leaveSession() {
     clearTimeout(saveTimer);
     if (savePending) await saveTrip();
@@ -560,12 +613,15 @@
   }
 
   /* ---------- Guest import ---------- */
+  // Guest import: trips to copy
   function pendingGuestTrips() {
     const done = importedRead()[state.uid] || [];
     return guestRead().filter(t => !done.includes(t.id));
   }
+  // Guest import: favorites to copy
   const pendingGuestFavs = () => guestFavRead().filter(f => !state.favorites.some(x => x.id === f.id));
 
+  // Guest import: ask user
   function offerImport() {
     if (state.guest) return;
     const key = 'waypoint.importAsked.' + state.uid;
@@ -583,6 +639,7 @@
     $('#importDialog').showModal();
   }
 
+  // Guest import: copy data to account
   async function importGuestData() {
     const btn = $('#importGo');
     btn.disabled = true;
@@ -617,6 +674,7 @@
   }
 
   /* ---------- Account ---------- */
+  // Account: show message
   function acctMsg(text, kind = 'error') {
     const el = $('#acctMsg');
     el.textContent = text || '';
@@ -624,10 +682,12 @@
     el.hidden = !text;
   }
 
+  // Account: disable buttons while busy
   function setAcctBusy(busy) {
     document.querySelectorAll('#accountDialog button').forEach(b => { b.disabled = busy; });
   }
 
+  // Account: email verified status
   function renderVerify() {
     const u = auth && auth.currentUser;
     if (!u) return;
@@ -639,6 +699,7 @@
     renderAccount();
   }
 
+  // Account: open dialog
   function openAccount() {
     if (!auth || !auth.currentUser) { toast('Log in to an account first.'); return; }
     $('#pwForm').reset();
@@ -648,6 +709,7 @@
     $('#accountDialog').showModal();
   }
 
+  // Account: resend verification email
   async function resendVerification() {
     try {
       await auth.currentUser.sendEmailVerification();
@@ -657,6 +719,7 @@
     }
   }
 
+  // Account: re-check verification
   async function refreshVerification() {
     try {
       await auth.currentUser.reload();
@@ -667,12 +730,14 @@
     }
   }
 
+  // Account: re-check password
   async function reauth(pass) {
     const u = auth.currentUser;
     const cred = firebase.auth.EmailAuthProvider.credential(u.email, pass);
     await u.reauthenticateWithCredential(cred);
   }
 
+  // Account: change password
   async function changePassword(e) {
     e.preventDefault();
     const cur = $('#pwCurrent').value;
@@ -693,6 +758,7 @@
     }
   }
 
+  // Account: delete all data
   async function deleteAllUserData() {
     const snap = await db.collection('trips').where('uid', '==', state.uid).get();
     const batch = db.batch();
@@ -701,6 +767,7 @@
     await batch.commit();
   }
 
+  // Account: delete account
   async function deleteAccount(e) {
     e.preventDefault();
     const pass = $('#delPass').value;
@@ -727,8 +794,10 @@
   }
 
   /* ---------- Saving ---------- */
+  // Saving: status text
   function setSaveState(text) { $('#saveState').textContent = text; }
 
+  // Saving: debounced save
   function queueSave() {
     savePending = true;
     setSaveState('Saving...');
@@ -736,6 +805,7 @@
     saveTimer = setTimeout(saveTrip, 600);
   }
 
+  // Saving: write trip
   async function saveTrip() {
     savePending = false;
     const t = state.trip;
@@ -754,6 +824,7 @@
     }
   }
 
+  // Saving: error message
   function firestoreMessage(e) {
     if (e && e.code === 'permission-denied') {
       return 'Firestore blocked the request. Check your security rules.';
@@ -762,6 +833,7 @@
   }
 
   /* ---------- Place search ---------- */
+  // New trip: destination autocomplete
   function setupAutocomplete(input, list, onPick) {
     let timer = null;
     let seq = 0;
@@ -809,6 +881,7 @@
   }
 
   /* ---------- Weather ---------- */
+  // Weather: load forecast
   async function loadForecast() {
     const t = state.trip;
     state.forecast = null;
@@ -844,10 +917,13 @@
     renderPanel();
   }
 
+  // Weather: forecast for a day
   const weatherFor = day => (state.forecast ? state.forecast[toISO(dateFor(day))] : null);
+  // Weather: is rain likely
   const isWet = w => !!w && (w.pop >= 0.5 || WET_CONDITIONS.includes(w.main));
 
   /* ---------- Exchange rates ---------- */
+  // Budget: load exchange rates
   async function loadRates() {
     const base = state.trip.homeCurrency;
     state.ratesError = null;
@@ -864,6 +940,7 @@
   }
 
   /* ---------- Nearby places ---------- */
+  // Find places: search center
   function discoverCenter() {
     const d = state.trip.destination;
     if (state.category === HOTEL_CAT) return { lat: d.lat, lon: d.lon, label: d.name };
@@ -872,6 +949,7 @@
     return { lat: d.lat, lon: d.lon, label: d.name };
   }
 
+  // Find places: format a result
   function normalizePlace(f) {
     const p = f.properties;
     const cats = p.categories || [];
@@ -887,6 +965,7 @@
     };
   }
 
+  // Find places: search
   async function discover() {
     const c = discoverCenter();
     const mine = ++placesSeq;
@@ -917,6 +996,7 @@
   }
 
   /* ---------- Routing ---------- */
+  // Find places: name search
   function runSearch() {
     if (state.panel !== 'discover') return;
     const q = state.query.trim();
@@ -925,12 +1005,14 @@
     discover();
   }
 
+  // Routing: API headers
   const orsHeaders = () => ({
     Authorization: CFG.ors,
     'Content-Type': 'application/json',
     Accept: 'application/json, application/geo+json',
   });
 
+  // Routing: request route (debounced)
   function requestRoute(day = state.day, delay = 350) {
     clearTimeout(routeTimers[day]);
     if (routePoints(day).length < 2) {
@@ -946,10 +1028,12 @@
     routeTimers[day] = setTimeout(() => updateRoute(day), delay);
   }
 
+  // Routing: route if missing
   function ensureRoute(day) {
     if (routePoints(day).length >= 2 && !state.routeLine[day] && !state.routeError[day]) requestRoute(day, 0);
   }
 
+  // Routing: recalculate all routes
   function resetRoutes() {
     const t = state.trip;
     t.routes = {};
@@ -962,6 +1046,7 @@
     for (let d = 1; d <= t.days; d++) requestRoute(d, (d - 1) * 300);
   }
 
+  // Routing: get route from API
   async function updateRoute(day) {
     const t = state.trip;
     const pts = routePoints(day);
@@ -991,6 +1076,7 @@
     renderMap();
   }
 
+  // Optimize order: algorithm
   async function reorderByTravelTime(day) {
     const stops = dayStops(day);
     const hotel = state.trip.hotel;
@@ -1039,6 +1125,7 @@
     };
   }
 
+  // Optimize order: button
   async function optimizeDay() {
     const day = state.day;
     const need = state.trip.hotel ? 2 : 3;
@@ -1058,6 +1145,7 @@
   }
 
   // Within reach
+  // Within reach: starting point
   function reachOrigin() {
     const t = state.trip;
     const v = $('#reachFrom').value || '';
@@ -1070,6 +1158,7 @@
     return { lat: t.destination.lat, lon: t.destination.lon, label: t.destination.name };
   }
 
+  // Within reach: show area
   async function showReach() {
     if (!state.trip || state.reachBusy) return;
     const t = state.trip;
@@ -1101,12 +1190,14 @@
     renderReachUI();
   }
 
+  // Within reach: clear
   function clearReach() {
     state.reach = null;
     renderMap();
     renderReachUI();
   }
 
+  // Within reach: pick point on map
   function pickReachPoint() {
     if (!map || !state.trip || state.reachPick) return;
     state.reachPick = true;
@@ -1122,6 +1213,7 @@
     });
   }
 
+  // Within reach: dropdown
   function renderReachOptions(select) {
     if (!state.trip) return;
     const t = state.trip;
@@ -1139,6 +1231,7 @@
     el.value = opts.some(o => o[0] === cur) ? cur : opts[0][0];
   }
 
+  // Within reach: buttons and note
   function renderReachUI() {
     const r = state.reach;
     $('#reachGo').disabled = state.reachBusy;
@@ -1150,6 +1243,7 @@
   }
 
   /* ---------- Trip actions ---------- */
+  // Trips: save and re-render
   function touch() {
     queueSave();
     renderSidebar();
@@ -1158,6 +1252,7 @@
     renderMap();
   }
 
+  // Trips: open
   async function openTrip(id) {
     const found = state.trips.find(t => t.id === id);
     if (!found) return;
@@ -1201,6 +1296,7 @@
     setSaveState('');
   }
 
+  // New trip: create
   async function createTrip(e) {
     e.preventDefault();
     if (nt.step < 2) { if (nt.ok[nt.step]) goStep(nt.step + 1); return; }
@@ -1237,6 +1333,7 @@
     }
   }
 
+  // Trips: delete (with undo)
   async function deleteTrip() {
     const t = state.trip;
     if (!t) return;
@@ -1267,6 +1364,7 @@
     }
   }
 
+  // UI: panel animation
   function enterPanel() {
     const el = $('#panel');
     el.classList.remove('enter');
@@ -1274,6 +1372,7 @@
     el.classList.add('enter');
   }
 
+  // Itinerary: switch day
   function setDay(n) {
     enterPanel();
     state.day = n;
@@ -1288,6 +1387,7 @@
     if (state.panel === 'discover') discover();
   }
 
+  // UI: switch panel
   function setPanel(name) {
     enterPanel();
     state.panel = name;
@@ -1297,6 +1397,7 @@
     if (name === 'discover' && state.placesStatus === 'idle') discover();
   }
 
+  // Itinerary: create stop
   function makeStop(p, day) {
     return {
       id: uid(), placeId: p.id, name: p.name, address: p.address,
@@ -1305,6 +1406,7 @@
     };
   }
 
+  // Itinerary: add stop
   function addPlace(p) {
     const t = state.trip;
     if (!p) return;
@@ -1316,6 +1418,7 @@
     toast(`Added to Day ${state.day}: ${p.name}`);
   }
 
+  // Itinerary: move up/down
   function moveStop(id, dir) {
     const list = dayStops();
     const i = list.findIndex(s => s.id === id);
@@ -1327,6 +1430,7 @@
     requestRoute(state.day);
   }
 
+  // Itinerary: drag and drop reorder
   function dropStop(dragged, target, after) {
     if (dragged === target) return;
     const list = dayStops();
@@ -1341,6 +1445,7 @@
     requestRoute(state.day);
   }
 
+  // Itinerary: remove stop (with undo)
   function removeStop(id) {
     const t = state.trip;
     const idx = t.stops.findIndex(s => s.id === id);
@@ -1359,6 +1464,7 @@
     });
   }
 
+  // Itinerary: move to another day
   function moveStopToDay(id, newDay) {
     const s = state.trip.stops.find(x => x.id === id);
     if (!s || s.day === newDay) return;
@@ -1371,6 +1477,7 @@
   }
 
   /* ---------- Hotel ---------- */
+  // Hotel: set
   function setHotel(p) {
     if (!p) return;
     state.trip.hotel = { placeId: p.id, name: p.name, address: p.address, lat: p.lat, lon: p.lon };
@@ -1380,6 +1487,7 @@
     toast(`Hotel set: ${p.name}`);
   }
 
+  // Hotel: remove
   function clearHotel() {
     state.trip.hotel = null;
     touch();
@@ -1388,9 +1496,12 @@
   }
 
   /* ---------- Favorites ---------- */
+  // Favorites: is saved
   const isFav = id => state.favorites.some(f => f.id === id);
+  // Favorites: stop to place
   const stopPlace = s => ({ id: s.placeId, name: s.name, address: s.address, lat: s.lat, lon: s.lon, outdoor: !!s.outdoor, hotel: !!s.hotel });
 
+  // Favorites: add/remove
   async function toggleFav(p) {
     if (!p || !p.id) return;
     if (isFav(p.id)) {
@@ -1412,6 +1523,7 @@
   }
 
   /* ---------- Auto-plan ---------- */
+  // Auto-plan: message
   function planMsg(text, kind = 'ok') {
     const el = $('#planMsg');
     el.textContent = text || '';
@@ -1419,6 +1531,7 @@
     el.hidden = !text;
   }
 
+  // Auto-plan: disable buttons while busy
   function setPlanBusy(busy) {
     state.planBusy = busy;
     $('#planSubmit').disabled = busy;
@@ -1426,6 +1539,7 @@
     $('#cancelPlan').disabled = busy;
   }
 
+  // Auto-plan: open dialog
   function openPlanDialog() {
     const t = state.trip;
     const day = state.day;
@@ -1443,6 +1557,7 @@
     $('#planDialog').showModal();
   }
 
+  // Auto-plan: plan the day
   async function runAutoPlan(e) {
     e.preventDefault();
     if (state.planBusy) return;
@@ -1518,6 +1633,7 @@
   }
 
   /* ---------- Rendering ---------- */
+  // UI: render everything
   function renderAll() {
     renderSidebar();
     renderHeader();
@@ -1529,6 +1645,7 @@
     renderReachUI();
   }
 
+  // Trips list: days-to-go label
   function countdown(t) {
     const n = Math.round((new Date(t.startDate + 'T00:00:00') - new Date().setHours(0, 0, 0, 0)) / 864e5);
     const txt = n > 1 ? `${n} days to go` : n === 1 ? 'Tomorrow'
@@ -1536,6 +1653,7 @@
     return txt ? `<span class="trip-count">${txt}</span>` : '';
   }
 
+  // Trips list: render
   function renderSidebar() {
     const list = $('#tripList');
     if (!state.trips.length) {
@@ -1553,6 +1671,7 @@
     }).join('');
   }
 
+  // Trip photo: get from Wikipedia
   async function fetchPhoto(name) {
     try {
       const d = await getJSON(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(String(name).replace(/ /g, '_'))}`);
@@ -1561,6 +1680,7 @@
     } catch { return ''; }
   }
 
+  // Trip photo: show
   function renderPhoto() {
     const t = state.trip;
     const h = $('.trip-head');
@@ -1569,6 +1689,7 @@
     h.style.setProperty('--photo', t.photo ? `url("${t.photo}")` : 'none');
   }
 
+  // Trip photo: load if missing
   async function ensurePhoto() {
     const t = state.trip;
     if (!t || t.photo !== undefined) return;
@@ -1580,6 +1701,7 @@
     renderSidebar();
   }
 
+  // UI: trip header
   function renderHeader() {
     const t = state.trip;
     $('#tripName').value = t.name;
@@ -1592,6 +1714,7 @@
       `${t.destination.label}. ${fmtDate(a, opts)} to ${fmtDate(b, { ...opts, year: 'numeric' })}.`;
   }
 
+  // Itinerary: day tabs
   function renderDays() {
     const t = state.trip;
     if (!t) return;
@@ -1611,6 +1734,7 @@
       `${t.destination.label}. ${fmtDate(dateFor(1), { day: 'numeric', month: 'short' })} to ${fmtDate(dateFor(t.days), { day: 'numeric', month: 'short', year: 'numeric' })}.`;
   }
 
+  // Weather: render card
   function renderWeather() {
     const el = $('#weather');
     if (!state.trip) return;
@@ -1637,11 +1761,13 @@
     </div>`;
   }
 
+  // UI: active panel button
   function renderSeg() {
     document.querySelectorAll('#seg button').forEach(b =>
       b.setAttribute('aria-selected', String(b.dataset.panel === state.panel)));
   }
 
+  // UI: render selected panel
   function renderPanel() {
     if (!state.trip) return;
     const el = $('#panel');
@@ -1666,11 +1792,14 @@
 
   const WX_ICON = { '01': 'sun', '02': 'cloud-sun', '03': 'cloud', '04': 'cloud', '09': 'rain', '10': 'rain', '11': 'bolt', '13': 'snow', '50': 'mist' };
   const SKY = { Clear: 'clear', Clouds: 'clouds', Rain: 'rain', Drizzle: 'rain', Thunderstorm: 'storm', Snow: 'snow' };
+  // Weather: icon
   const wxIconName = code => WX_ICON[String(code || '').slice(0, 2)] || 'cloud';
 
+  // Favorites: star button
   const starBtn = (act, attrs, on) =>
     `<button class="icon-btn star" type="button" data-act="${act}" ${attrs} aria-pressed="${on}" aria-label="${on ? 'Remove from favorites' : 'Save to favorites'}" title="${on ? 'Remove from favorites' : 'Save to favorites'}">${ICON.star}</button>`;
 
+  // Itinerary panel
   function itineraryHTML() {
     const t = state.trip;
     const day = state.day;
@@ -1801,6 +1930,7 @@
     return h;
   }
 
+  // Find places panel
   function discoverHTML() {
     const s = state;
     const chips = [{ id: 'all', label: 'All' }, ...CATEGORIES].map(c =>
@@ -1847,6 +1977,7 @@
         <label>Within <select data-act="radius">${radii}</select></label></div>${body}`;
   }
 
+  // Saved places panel
   function savedHTML() {
     const t = state.trip;
     const d = t.destination;
@@ -1874,6 +2005,7 @@
     }).join('') + '</ul>';
   }
 
+  // Budget panel
   function budgetHTML() {
     const t = state.trip;
     const rates = state.rates && state.rates.base === t.homeCurrency ? state.rates.rates : null;
@@ -1945,11 +2077,13 @@
   }
 
   /* ---------- Map ---------- */
+  // Map: tile layer
   const tiles = () => L.tileLayer(`https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=${CFG.geoapify}`, {
     maxZoom: 19,
     attribution: 'Powered by <a href="https://www.geoapify.com/">Geoapify</a> | &copy; OpenMapTiles &copy; OpenStreetMap contributors',
   });
 
+  // Map: create
   function setupMap() {
     map = L.map('map').setView([20, 10], 2);
     tiles().addTo(map);
@@ -1961,6 +2095,7 @@
     if (box) { L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box); }
   }
 
+  // Map: marker icon
   const pinIcon = (label, cls = '') => L.divIcon({
     className: '',
     html: `<div class="pin pin-map ${cls}">${label}</div>`,
@@ -1968,6 +2103,7 @@
     iconAnchor: [14, 14],
   });
 
+  // Map: place popup
   function popupNode(p) {
     const div = document.createElement('div');
     div.innerHTML = `<div class="pop-name">${esc(p.name)}</div><div class="pop-addr">${esc(p.address)}</div>`;
@@ -1997,6 +2133,7 @@
     return div;
   }
 
+  // Map: stop popup
   function stopPopup(s, tm) {
     const div = document.createElement('div');
     div.innerHTML = `<div class="pop-name">${esc(s.name)}</div>
@@ -2007,6 +2144,7 @@
     return div;
   }
 
+  // Map: popup photos
   async function fillStopPhotos(s, node, marker) {
     const box = node.querySelector('.pop-photo');
     if (box.dataset.done) return;
@@ -2045,6 +2183,7 @@
     show();
   }
 
+  // Map: render
   function renderMap() {
     if (!map || !state.trip) return;
     Object.values(layers).forEach(l => l.clearLayers());
@@ -2094,11 +2233,13 @@
     });
   }
 
+  // Map: highlight stop
   function hlStop(id, on) {
     const el = document.querySelector(`.stop[data-id="${id}"]`);
     if (el) el.classList.toggle('hl', on);
   }
 
+  // Map: zoom to stop
   function focusStop(id) {
     const m = stopMarkers[id];
     if (!m || !map) return;
@@ -2107,6 +2248,7 @@
     if (window.matchMedia('(max-width: 1050px)').matches) $('#map').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
+  // Print: build printable itinerary
   function renderPrint() {
     const el = $('#printView');
     const t = state.trip;
@@ -2133,6 +2275,7 @@
     el.innerHTML = h;
   }
 
+  // Map: fit to stops
   function fitMap() {
     if (!map || !state.trip) return;
     const pts = dayStops().map(s => [s.lat, s.lon]);
@@ -2144,6 +2287,7 @@
   }
 
   /* ---------- Events ---------- */
+  // New trip: open wizard
   function openNewPage() {
     if (!state.uid) { toast('Log in or continue as guest first.'); return; }
     if (isPlaceholder(CFG.geoapify)) { toast('Add your Geoapify key in config.js first.'); return; }
@@ -2178,6 +2322,7 @@
     $('#ntDest').focus();
   }
 
+  // New trip: close wizard
   function closeNewPage() {
     $('#newPage').hidden = true;
     $('#empty').hidden = !!state.trip;
@@ -2185,6 +2330,7 @@
     if (state.trip && map) map.invalidateSize();
   }
 
+  // New trip: destination preview
   function syncPreview() {
     const p = pendingDest;
     if (!p || document.activeElement === $('#ntDest')) return;
@@ -2206,6 +2352,7 @@
     nmap.setView([p.lat, p.lon], 11);
   }
 
+  // New trip: validate steps
   function renderNew() {
     const days = parseInt($('#ntDays').value, 10);
     const v1 = !!pendingDest;
@@ -2224,6 +2371,7 @@
     renderCal();
   }
 
+  // New trip: go to step
   function goStep(n) {
     nt.step = n;
     renderNew();
@@ -2233,6 +2381,7 @@
     }
   }
 
+  // New trip: calendar
   function renderCal() {
     const a = $('#ntStart').value;
     const n = Math.min(14, Math.max(1, parseInt($('#ntDays').value, 10) || 1));
@@ -2263,6 +2412,7 @@
       <p class="cal-sum">${esc(sum)}</p>`;
   }
 
+  // Drag and drop: clear markers
   function clearDropMarks() {
     document.querySelectorAll('.drop-before, .drop-after, .dragging').forEach(el =>
       el.classList.remove('drop-before', 'drop-after', 'dragging'));
@@ -2272,6 +2422,7 @@
   const photoCache = {};
   const ph = { items: [], i: 0 };
 
+  // Photos: load from Wikimedia
   async function loadPlacePhotos(p) {
     const key = `${(+p.lat).toFixed(4)},${(+p.lon).toFixed(4)}`;
     if (photoCache[key]) return photoCache[key];
@@ -2300,6 +2451,7 @@
     return (photoCache[key] = items);
   }
 
+  // Photos: open gallery
   async function openPhotos(p) {
     if (!p) return;
     $('#photoTitle').textContent = p.name;
@@ -2315,6 +2467,7 @@
     renderPhotos();
   }
 
+  // Photos: render gallery
   function renderPhotos() {
     const n = ph.items.length;
     if (!n) { $('#photoBody').innerHTML = '<p class="empty-note">No community photos found near this place on Wikimedia Commons yet.</p>'; return; }
@@ -2328,23 +2481,28 @@
     if (cur) cur.scrollIntoView({ inline: 'center', block: 'nearest' });
   }
 
+  // Photos: next/previous
   function stepPhoto(d) {
     if (ph.items.length < 2) return;
     ph.i = (ph.i + d + ph.items.length) % ph.items.length;
     renderPhotos();
   }
 
+  // Theme: dark/light
   function applyTheme(t) {
     document.documentElement.dataset.theme = t;
     $('#themeBtn').innerHTML = t === 'light' ? ic('moon') + ' Dark theme' : ic('sun') + ' Light theme';
     try { localStorage.setItem('waypoint.theme', t); } catch {}
   }
 
+  // Events: attach all listeners
   function bindEvents() {
     let theme = 'dark';
     try { theme = localStorage.getItem('waypoint.theme') || 'dark'; } catch {}
     applyTheme(theme);
+    // Theme
     $('#themeBtn').addEventListener('click', () => applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'));
+    // Photos gallery
     $('#closePhotos').addEventListener('click', () => $('#photoDialog').close());
     $('#photoDialog').addEventListener('click', e => {
       const n = e.target.closest('[data-ph]');
@@ -2356,6 +2514,7 @@
       if (e.key === 'ArrowRight') stepPhoto(1);
       else if (e.key === 'ArrowLeft') stepPhoto(-1);
     });
+    // New trip wizard
     $('#newTripBtn').addEventListener('click', openNewPage);
     $('#emptyNew').addEventListener('click', openNewPage);
     $('#newForm').addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) goStep(+g.dataset.go); });
@@ -2382,11 +2541,13 @@
       if (day) { $('#ntStart').value = day.dataset.d; renderNew(); }
     });
 
+    // Trips list
     $('#tripList').addEventListener('click', e => {
       const b = e.target.closest('[data-id]');
       if (b) openTrip(b.dataset.id);
     });
 
+    // Trip header (rename, mode, delete)
     $('#tripName').addEventListener('change', e => {
       const v = e.target.value.trim();
       if (!v) { e.target.value = state.trip.name; return; }
@@ -2403,6 +2564,7 @@
 
     $('#deleteTrip').addEventListener('click', deleteTrip);
 
+    // Login / Sign up / Guest / Logout
     $('#authForm').addEventListener('submit', submitAuth);
     $('#authEmail').addEventListener('input', clearEmailState);
     $('#authEmail').addEventListener('blur', () => { if (document.hasFocus()) checkEmail(); });
@@ -2414,6 +2576,7 @@
     $('#guestBtn').addEventListener('click', continueAsGuest);
     $('#logoutBtn').addEventListener('click', leaveSession);
 
+    // Account settings
     $('#accountBtn').addEventListener('click', openAccount);
     $('#closeAccount').addEventListener('click', () => $('#accountDialog').close());
     $('#resendVerify').addEventListener('click', resendVerification);
@@ -2421,16 +2584,20 @@
     $('#pwForm').addEventListener('submit', changePassword);
     $('#delForm').addEventListener('submit', deleteAccount);
 
+    // Guest import
     $('#importGo').addEventListener('click', importGuestData);
     $('#importLater').addEventListener('click', () => $('#importDialog').close());
 
+    // Auto-plan
     $('#planForm').addEventListener('submit', runAutoPlan);
     $('#cancelPlan').addEventListener('click', () => $('#planDialog').close());
 
+    // Within reach
     $('#reachGo').addEventListener('click', showReach);
     $('#reachPickBtn').addEventListener('click', pickReachPoint);
     $('#reachClear').addEventListener('click', clearReach);
 
+    // Day tabs
     $('#days').addEventListener('click', e => {
       const b = e.target.closest('[data-day]');
       if (b) setDay(+b.dataset.day);
@@ -2449,6 +2616,7 @@
       renderWeather();
     });
 
+    // Panel tabs
     $('#seg').addEventListener('click', e => {
       const b = e.target.closest('[data-panel]');
       if (b) setPanel(b.dataset.panel);
@@ -2456,6 +2624,7 @@
 
     const panel = $('#panel');
 
+    // Panel clicks
     panel.addEventListener('click', e => {
       const card = e.target.closest('.stop[data-id]');
       if (card && !e.target.closest('button, input, select, label, .grip, .stop-menu')) { focusStop(card.dataset.id); return; }
@@ -2498,6 +2667,7 @@
       }
     });
 
+    // Panel dropdowns / checkboxes
     panel.addEventListener('change', async e => {
       const el = e.target.closest('[data-act]');
       if (!el) return;
@@ -2526,6 +2696,7 @@
       }
     });
 
+    // Panel typing
     panel.addEventListener('input', e => {
       const el = e.target;
       if (el.id === 'placeSearch') {
@@ -2538,6 +2709,7 @@
       }
     });
 
+    // Panel forms
     panel.addEventListener('submit', e => {
       if (e.target.id === 'placeForm') {
         e.preventDefault();
@@ -2555,6 +2727,7 @@
       renderPanel();
     });
 
+    // Drag and drop
     panel.addEventListener('dragstart', e => {
       const g = e.target.closest && e.target.closest('.grip');
       if (!g) return;
@@ -2589,6 +2762,7 @@
     });
     panel.addEventListener('dragend', () => { dragId = null; clearDropMarks(); });
 
+    // Window resize / menu close / print
     window.addEventListener('resize', () => map && map.invalidateSize());
 
     document.addEventListener('click', e => {
@@ -2599,6 +2773,7 @@
   }
 
   /* ---------- Start ---------- */
+  // Startup
   async function init() {
     setupMap();
     bindEvents();

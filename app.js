@@ -132,17 +132,16 @@ function run(){
   const T=total([BASE,...set.map(c=>c.v),...tis.map(c=>c.v)]),TC=total([BASE,...cur,...ctv]);
   const M=metrics(T,p),MC=metrics(TC,p),g=GOALS[p.goal];
   const sc=f(T),scc=f(TC);
-  const qx=k=>`<label class="qx" title="Leave this out of the calculation and show the next best"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
+  const qx=k=>`<label class="qx"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
   if(lastEx&&!exSet.has(lastEx.k))lastEx=null;
   const exNote=lastEx?`<p class="hint exnote">Excluded <b>${esc(lastEx.name)}</b> from the calculation. <button type="button" class="btn" data-undo>Undo</button></p>`:'';
   const card=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">${c.k}</span><h3>${c.n}</h3>
   <div class="tags">${c.cl?`<span class="tag">${c.cl}</span>`:''}${c.ser?`<span class="tag set">${c.ser} set</span>`:''}${ownedSet.has(c.n)?'<span class="tag own">owned</span>':''}${c.fl?`<span class="tag">${c.fl}</span>`:''}</div>
   <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx(c.n)}</div>`;
   const tcard=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">Title · ${c.rar}</span><h3>${esc(c.n)}</h3>
-  <div class="tags">${c.lock?'<span class="tag">locked · incl. its unlock bonus</span>':'<span class="tag own">unlocked</span>'}</div>
+  <div class="tags">${c.lock?'<span class="tag">locked</span>':'<span class="tag own">unlocked</span>'}</div>
   <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx('t:'+c.i)}</div>`;
-  const tsec=tOn?`<h2 class="sub">Titles <span class="hint">· ${TSLOTS} boost slots</span></h2>${tis.length?`<div class="slots">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}
-  <p class="hint" style="margin:-4px 0 16px">Also counted: the collection bonus of your ${TT.filter(t=>TOWN.has(t.i)&&Object.keys(t.cb).length).length} unlocked titles (always on, no slot needed).</p>`:'';
+  const tsec=tOn?`<h2 class="sub">Titles</h2>${tis.length?`<div class="slots">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}`:'';
   const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
   const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return`<tr class="${key?'key':''}"><td>${l}</td><td class="num">${fm(a)}</td><td class="num">${emp?'—':fm(b)}</td><td class="num ${emp?'':d>0.05?'up':d<-0.05?'dn':''}">${emp?'':Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%'}</td></tr>`};
   const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||(!emp&&TC[d])).map(([k,d])=>`<tr><td>${k}</td><td class="num">${fmt(k,T[d])}</td><td class="num">${emp?'—':fmt(k,TC[d])}</td><td class="num ${emp?'':T[d]>TC[d]?'up':T[d]<TC[d]?'dn':''}">${emp||T[d]===TC[d]?'':fmt(k,T[d]-TC[d])}</td></tr>`).join('');
@@ -168,12 +167,10 @@ const isOwn=e=>e.T?TOWN.has(e.it.i):ownedSet.has(e.it.n);
 const CATS=[...new Set(ENT.map(e=>e.cat))];
 const bf=o=>Object.keys(o).map(k=>k+' '+fmt(k,o[k])).join(', ');
 const rowHtml=i=>{const e=ENT[i],it=e.it,tags=e.T?[it.c,it.r].join(' · '):[it.k!==it.c?it.k:'',it.cl,it.fl].filter(Boolean).join(' · ');
-  const tip=e.T?`${it.d}\nEquipped: ${bf(it.b)||'none'}\nCollection (once unlocked): ${bf(it.cb)||'none'}`:'';
-  const exTip=e.T?'Never suggest this title for a slot (its collection bonus still counts while it is unlocked)':'Do not include in calculation';
-  return`<div class="row" data-i="${i}"><label class="own"${tip?` title="${esc(tip).replace(/"/g,'&quot;')}"`:''}><input type="checkbox" data-p="${i}">${dot(e.T?{r:TR[it.r]||1}:it)}<span class="nm">${esc(it.n)}</span><span class="k">${esc(tags)}</span></label><label class="ex" title="${exTip}"><input type="checkbox" data-x="${i}">Exclude</label></div>`};
+  return`<div class="row" data-i="${i}"><label class="own"><input type="checkbox" data-p="${i}">${dot(e.T?{r:TR[it.r]||1}:it)}<span class="nm">${esc(it.n)}</span><span class="k">${esc(tags)}</span></label><label class="ex"><input type="checkbox" data-x="${i}">Exclude</label></div>`};
 $('items-cats').innerHTML=CATS.map(c=>{const ix=ENT.map((_,i)=>i).filter(i=>ENT[i].cat===c);
   return`<section class="cat" data-c="${esc(c)}"><div class="cat-head"><h2>${esc(c)}<span class="num" data-cc></span></h2><div class="cat-btns"><button type="button" class="btn" data-a="on">Tick shown</button><button type="button" class="btn" data-a="off">Untick shown</button></div></div><div class="cat-grid">${ix.map(rowHtml).join('')}</div></section>`}).join('');
-$('pg-chips').innerHTML='<button type="button" class="btn hide" id="pg-exchip" aria-pressed="false" data-exchip title="Show only items and titles left out of the calculation">Unincluded <span class="num" id="pg-exnum"></span></button>'+CATS.map(c=>`<button type="button" class="btn" data-chip="${esc(c)}">${esc(c)} <span class="num"></span></button>`).join('');
+$('pg-chips').innerHTML='<button type="button" class="btn hide" id="pg-exchip" aria-pressed="false" data-exchip>Unincluded <span class="num" id="pg-exnum"></span></button>'+CATS.map(c=>`<button type="button" class="btn" data-chip="${esc(c)}">${esc(c)} <span class="num"></span></button>`).join('');
 const pgRows=[];document.querySelectorAll('#items-cats .row').forEach(l=>{pgRows[+l.dataset.i]=l});
 const pgSecs=[...document.querySelectorAll('#items-cats .cat')];
 function syncOwn(){
@@ -223,13 +220,11 @@ $('out').addEventListener('click',e=>{if(e.target.closest('[data-undo]')&&lastEx
 /* loadout bar */
 function renderLoBar(){
   const many=LO.list.length>2;
-  $('lo-tabs').innerHTML=LO.list.map((l,i)=>`<span class="lo-tab${i===LO.sel?' on':''}"><button type="button" class="btn" data-lo="${i}" aria-pressed="${i===LO.sel}">${esc(loName(i))}</button>${many?`<button type="button" class="lo-x" data-lo-del="${i}" aria-label="Delete ${esc(loName(i))}" title="Delete this loadout">×</button>`:''}</span>`).join('');
+  $('lo-tabs').innerHTML=LO.list.map((l,i)=>`<span class="lo-tab${i===LO.sel?' on':''}"><button type="button" class="btn" data-lo="${i}" aria-pressed="${i===LO.sel}">${esc(loName(i))}</button>${many?`<button type="button" class="lo-x" data-lo-del="${i}" aria-label="Delete ${esc(loName(i))}">×</button>`:''}</span>`).join('');
   $('lo-name').value=LO.list[LO.sel].name;$('lo-name').placeholder='Loadout '+(LO.sel+1);
   syncLoBar()}
 function syncLoBar(){
-  const lo=LO.list[LO.sel],n=lo.items.length,t=lo.titles.length;
-  $('lo-equip').disabled=!last;$('lo-equip').textContent='Equip suggested set to '+loName(LO.sel);
-  $('lo-hint').textContent=n||t?'Currently equipped: '+n+' item'+(n===1?'':'s')+', '+t+' title'+(t===1?'':'s'):'Empty — equip the suggested set to compare against it.'}
+  $('lo-equip').disabled=!last;$('lo-equip').textContent='Equip suggested set to '+loName(LO.sel);}
 function pickLo(i){LO.sel=i;saveLo();renderLoBar();clearTimeout(tm);run()}
 $('lo-tabs').addEventListener('click',e=>{
   const x=e.target.closest('[data-lo-del]'),b=e.target.closest('[data-lo]');

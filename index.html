@@ -10,8 +10,7 @@
 <body>
 <header>
 <h1>Ouwland loadout optimizer</h1>
-<p>Picks the best five stat items from the 302 wearables in the game files for the goal you choose. Results update as you change anything.</p>
-<nav class="nav" aria-label="Pages"><a id="nav-opt" href="#optimizer" aria-current="page">Optimizer</a><a id="nav-items" href="#my-items">My items<span class="badge hide" id="nav-badge" title="Items left out of the calculation"></span></a></nav>
+<nav class="nav" aria-label="Pages"><a id="nav-opt" href="#optimizer" aria-current="page">Optimizer</a><a id="nav-items" href="#my-items">My items<span class="badge hide" id="nav-badge"></span></a></nav>
 </header>
 <div class="wrap">
 <aside class="panel ctl">
@@ -57,7 +56,6 @@
 <div class="lo-tabs" id="lo-tabs" role="group" aria-label="Loadouts"></div>
 <div class="lo-act"><label class="lo-name">Rename<input type="text" id="lo-name" maxlength="24" autocomplete="off"></label>
 <button type="button" class="btn" id="lo-add">+ Add new loadout</button><button type="button" class="btn pri" id="lo-equip" disabled>Equip suggested set</button></div>
-<p class="hint" id="lo-hint"></p>
 </div>
 <div class="panel" id="out"></div>
 
@@ -65,11 +63,10 @@
 </div>
 <div id="items-page" class="hide">
 <div class="panel">
-<div class="i-tools"><input type="search" id="pg-q" placeholder="Search by name, class, category, stat or tag (event, title, faction only…)" aria-label="Search items"><button type="button" class="btn pri" id="pg-go">Search</button><button type="button" class="btn" id="pg-clear">Clear</button>
+<div class="i-tools"><input type="search" id="pg-q" placeholder="Search items" aria-label="Search items"><button type="button" class="btn pri" id="pg-go">Search</button><button type="button" class="btn" id="pg-clear">Clear</button>
 <select id="pg-f" aria-label="Show"><option value="all">All items</option><option value="yes">Owned / unlocked only</option><option value="no">Not owned / locked only</option></select></div>
 <div class="i-sum" style="margin-top:12px"><span><b class="num" id="pg-total"></b> <span class="hint" id="pg-shown"></span></span>
 <span class="cat-btns"><button type="button" class="btn" id="pg-all">Tick all shown</button><button type="button" class="btn" id="pg-none">Untick all shown</button><button type="button" class="btn" id="pg-reset">Reset to save</button><button type="button" class="btn hide" id="pg-exclear">Clear exclusions</button></span></div>
-<p class="hint" style="margin-top:12px">Tick <b>Exclude</b> to leave an item out of the calculation, even if you own it. For titles, the tick means unlocked, and Exclude keeps a title out of the 3 slots.</p>
 <div class="chips" id="pg-chips" style="margin-top:12px" role="group" aria-label="Jump to category"></div>
 </div>
 <div id="items-cats" style="display:grid;gap:16px"></div>

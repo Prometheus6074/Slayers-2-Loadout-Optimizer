@@ -24,10 +24,10 @@ function metrics(T,p){
   const cp=Math.min(1,Math.max(0,p.cc+g('Crit Chance'))),m=1+p.cb+g('Crit Damage Factor');
   const hp=(p.hp+g('Max Health'))*(1+g('Max Health Factor'));
   const r=g('Damage Reduction Factor'),eff=r<=.4?r:.4+.2*(1-Math.exp(-(r-.4)/.2));
-  const taken=Math.max(1,p.inc-g('Damage Reduction'))*(1-eff);
   let s=g('Movement Speed Factor');if(s>.25)s=.25+(s-.25)*.4;
-  return{hit,crit:hit*m,exp:hit*(1+cp*(m-1)),hp,bulk:hp*p.inc/taken,surv:hp/taken,sta:g('Max Stamina'),spd:1+Math.min(s,.4),cp,m}}
-function params(){return{base:nz('base',3),cc:nz('cc',0)/100,cb:nz('cb',50)/100,hp:nz('hp',100),inc:nz('inc',100),goal:$('goal').value,
+  return{hit,crit:hit*m,exp:hit*(1+cp*(m-1)),hp,def:hp/Math.exp(p.hs.reduce((a,h)=>a+Math.log(Math.max(1,h-g('Damage Reduction'))*(1-eff)),0)/p.hs.length),sta:g('Max Stamina'),spd:1+Math.min(s,.4),cp,m}}
+function hitSizes(){const lo=Math.max(1,nz('dlo',5)),hi=Math.max(lo,nz('dhi',500)),n=9;return Array.from({length:n},(_,i)=>lo*Math.pow(hi/lo,i/(n-1)))}
+function params(){return{hs:hitSizes(),base:nz('base',3),cc:nz('cc',0)/100,cb:nz('cb',50)/100,hp:nz('hp',100),goal:$('goal').value,
   w:ST.map(k=>Math.max(0,parseFloat(document.querySelector(`[data-w="${k}"]`).value)||0))}}
 function scorer(p){return p.goal==='custom'?T=>T.reduce((a,x,d)=>a+x*p.w[d],0):T=>metrics(T,p)[p.goal]}
 function solve(C,f,S,oneCat,fs){
@@ -52,10 +52,11 @@ function solve(C,f,S,oneCat,fs){
   return{set:bs,cut}}
 const fmt=(k,v)=>{if(BOOL.has(k))return'Yes';if(/Factor|Regen|Crit/.test(k)&&!/^Max|Block Points/.test(k)){const x=Math.round(v*1000)/10;return(x>0?'+':'')+x+'%'}return String(Math.round(v*100)/100)};
 const n2=(x,d=1)=>(Math.round(x*10**d)/10**d).toLocaleString('en',{maximumFractionDigits:d});
-const GOALS={exp:['Damage per hit (with crits)',v=>n2(v,2)],hit:['Hit damage',v=>n2(v,2)],crit:['Crit hit damage',v=>n2(v,2)],hp:['Max HP',v=>n2(v,0)],surv:['Hits you can take',v=>n2(v,2)],bulk:['Bulk (effective HP)',v=>n2(v,0)],sta:['Max stamina',v=>n2(v,0)],spd:['Movement speed',v=>'×'+n2(v,3)],custom:['Custom score',v=>n2(v,2)]};
+const GOALS={exp:['Damage per hit (with crits)',v=>n2(v,2)],hit:['Hit damage',v=>n2(v,2)],crit:['Crit hit damage',v=>n2(v,2)],hp:['Max HP',v=>n2(v,0)],def:['Defense (hits you can take, any hit size)',v=>n2(v,2)],sta:['Max stamina',v=>n2(v,0)],spd:['Movement speed',v=>'×'+n2(v,3)],custom:['Custom score',v=>n2(v,2)]};
 function run(){
   const p=params(),f=scorer(p),tier=+$('tier').value,rl=+$('refine').value;
-  for(const[id,sh]of[['f-dmg',['exp','hit','crit']],['f-hp',['hp','surv','bulk']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal));
+  for(const[id,sh]of[['f-dmg',['exp','hit','crit']],['f-hp',['hp','def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal));
+  $('f-rng').classList.toggle('hide',p.goal!=='def');
   let items=DATA.items;
   if($('owned').checked)items=items.filter(i=>ownedSet.has(i.n));
   if($('noevt').checked)items=items.filter(i=>i.fl!=='unobtainable');
@@ -88,7 +89,7 @@ function run(){
   const card=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">${c.k}</span><h3>${c.n}</h3>
   <div class="tags">${c.cl?`<span class="tag">${c.cl}</span>`:''}${c.ser?`<span class="tag set">${c.ser} set</span>`:''}${ownedSet.has(c.n)?'<span class="tag own">owned</span>':''}${c.fl?`<span class="tag">${c.fl}</span>`:''}</div>
   <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul></div>`;
-  const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['surv','Hits you can take'],['bulk','Bulk (effective HP)'],['sta','Max stamina'],['spd','Movement speed']];
+  const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
   const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return`<tr class="${key?'key':''}"><td>${l}</td><td class="num">${fm(a)}</td><td class="num">${fm(b)}</td><td class="num ${d>0.05?'up':d<-0.05?'dn':''}">${Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%'}</td></tr>`};
   const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||TC[d]).map(([k,d])=>`<tr><td>${k}</td><td class="num">${fmt(k,T[d])}</td><td class="num">${fmt(k,TC[d])}</td><td class="num ${T[d]>TC[d]?'up':T[d]<TC[d]?'dn':''}">${T[d]===TC[d]?'':fmt(k,T[d]-TC[d])}</td></tr>`).join('');
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><span class="score num">${g[1](sc)}</span></div>

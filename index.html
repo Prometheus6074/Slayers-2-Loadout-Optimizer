@@ -22,8 +22,7 @@
 <option value="hit">Hit damage, no crit</option>
 <option value="crit">Crit hit damage</option>
 <option value="hp">Max HP</option>
-<option value="surv">Survivability (hits you can take)</option>
-<option value="bulk">Bulk (Max HP × Damage Reduction)</option>
+<option value="def">Defense (full hit, no block)</option>
 <option value="sta">Max stamina</option>
 <option value="spd">Movement speed</option>
 <option value="custom">Custom weights</option>
@@ -34,8 +33,9 @@
 <label>Base crit bonus %<input type="number" id="cb" value="50" min="0" step="any"></label>
 </fieldset>
 <fieldset id="f-hp">
-<div class="two"><label>Base max HP<input type="number" id="hp" value="100" min="0" step="any"></label>
-<label>Incoming hit<input type="number" id="inc" value="100" min="1" step="any"></label></div>
+<label>Base max HP<input type="number" id="hp" value="100" min="0" step="any"></label>
+<div class="two hide" id="f-rng"><label>Smallest hit<input type="number" id="dlo" value="5" min="1" step="any"></label>
+<label>Biggest hit<input type="number" id="dhi" value="500" min="1" step="any"></label></div>
 </fieldset>
 <fieldset id="f-cus" class="hide">
 <div class="wts" id="wts"></div>

@@ -11,7 +11,7 @@ const saveOwned=()=>{try{localStorage.setItem(OWN_KEY,JSON.stringify([...ownedSe
 /* items the user left out of the calculation (kept separate from "owned") */
 const EX_KEY='ouwland-excluded';
 let exSet=new Set();
-try{const sv=JSON.parse(localStorage.getItem(EX_KEY));if(Array.isArray(sv))exSet=new Set(sv.filter(n=>byName[n]))}catch(e){}
+try{const sv=JSON.parse(localStorage.getItem(EX_KEY));if(Array.isArray(sv))exSet=new Set(sv)}catch(e){}
 const saveEx=()=>{try{localStorage.setItem(EX_KEY,JSON.stringify([...exSet]))}catch(e){}};
 const nz=(id,d)=>{const v=parseFloat($(id).value);return isNaN(v)?d:v};
 for(let i=0;i<=10;i++)$('refine').add(new Option('+'+i,i,false,i===7));
@@ -24,11 +24,17 @@ function vec(it,tier,rl){
   return v}
 function total(vs){const T=new Array(D).fill(0);for(const v of vs)for(let d=0;d<D;d++)T[d]=HI[d]?Math.max(T[d],v[d]):T[d]+v[d];return T}
 /* titles: 3 boost slots (their buffs) + the collection bonus of every unlocked title (always on) */
-const TT=DATA.titles||[],TOWN=new Set(DATA.titlesOwned||[]),TSLOTS=3,tById=Object.fromEntries(TT.map(t=>[t.i,t]));
+const TT=DATA.titles||[],TSLOTS=3,tById=Object.fromEntries(TT.map(t=>[t.i,t]));
+const TOWN_KEY='ouwland-titles-unlocked';
+let TOWN=new Set(DATA.titlesOwned||[]);
+try{const sv=JSON.parse(localStorage.getItem(TOWN_KEY));if(Array.isArray(sv))TOWN=new Set(sv.filter(i=>tById[i]))}catch(e){}
+const saveTown=()=>{try{localStorage.setItem(TOWN_KEY,JSON.stringify([...TOWN]))}catch(e){}};
+/* excluded entries: item names, or 't:'+title id for titles; drop ones the data no longer has */
+for(const n of [...exSet])if(!(n.startsWith('t:')?tById[n.slice(2)]:byName[n]))exSet.delete(n);
 const TR={Common:1,Rare:3,Epic:4,Legendary:5,Mythic:6,Impossible:7,'Impossible Limited':7};
 const tvec=o=>{const v=new Array(D).fill(0);for(const k in o)if(I[k]!==undefined)v[I[k]]=o[k];return v};
 const tadd=(a,b)=>{const o={...a};for(const k in b)o[k]=(o[k]||0)+b[k];return o};
-const COLL=total(TT.filter(t=>TOWN.has(t.i)).map(t=>tvec(t.cb)));
+const collVec=()=>total(TT.filter(t=>TOWN.has(t.i)).map(t=>tvec(t.cb)));
 function metrics(T,p){
   const g=n=>T[I[n]];
   const hit=(p.base+g('Additional Damage'))*(1+g('Additional Damage Factor'));
@@ -91,10 +97,10 @@ function run(){
       if(!L.length)sel.add(new Option('No lantern matches the filters',''));
       if(L.some(i=>i.n===keep))sel.value=keep}
     if(!auto){fi=C.find(c=>c.n===sel.value)||null;if(fi)C=C.filter(c=>c!==fi)}}
-  const tOn=$('tit').checked,BASE=tOn?COLL:new Array(D).fill(0);let TP=[];
+  const tOn=$('tit').checked,BASE=tOn?collVec():new Array(D).fill(0);let TP=[];
   $('l-town').classList.toggle('hide',!tOn);
   if(tOn){const own=$('town').checked;
-    const cand=TT.filter(t=>Object.keys(t.b).length&&(!own||TOWN.has(t.i))).map(t=>({T:1,i:t.i,n:t.n,k:'Title',r:TR[t.r]||1,rar:t.r,lock:!TOWN.has(t.i),v:tvec(TOWN.has(t.i)?t.b:tadd(t.b,t.cb))}));
+    const cand=TT.filter(t=>Object.keys(t.b).length&&!exSet.has('t:'+t.i)&&(!own||TOWN.has(t.i))).map(t=>({T:1,i:t.i,n:t.n,k:'Title',r:TR[t.r]||1,rar:t.r,lock:!TOWN.has(t.i),v:tvec(TOWN.has(t.i)?t.b:tadd(t.b,t.cb))}));
     /* a title that 3 or more others match or beat on every stat can never be needed */
     TP=cand.filter((a,x)=>cand.filter((b,y)=>y!==x&&b.v.every((q,d)=>q>=a.v[d])&&(b.v.some((q,d)=>q>a.v[d])||y<x)).length<TSLOTS)}
   const pick=(pool,one)=>{let r={set:null};for(let S=5;S>0&&!r.set;S--)r=solve(pool.concat(TP),f,S,oc,one,BASE,Math.min(TSLOTS,TP.length));return r};
@@ -139,26 +145,31 @@ const dot=it=>`<span style="color:${RC[it.r]||RC[1]}" aria-hidden="true">●</sp
 let dirty=true,view='opt',exOnly=false;
 const ownAgain=()=>{clearTimeout(tm);tm=setTimeout(run,120)};
 const rerun=()=>{view==='opt'?ownAgain():dirty=true};
-/* My items page: one section per category */
-const CATS=[...new Set(DATA.items.map(i=>i.c))];
-const rowHtml=i=>{const it=DATA.items[i],tags=[it.k!==it.c?it.k:'',it.cl,it.fl].filter(Boolean).join(' · ');
-  return`<div class="row" data-i="${i}"><label class="own"><input type="checkbox" data-p="${i}">${dot(it)}<span class="nm">${esc(it.n)}</span><span class="k">${esc(tags)}</span></label><label class="ex" title="Do not include in calculation"><input type="checkbox" data-x="${i}">Exclude</label></div>`};
-$('items-cats').innerHTML=CATS.map(c=>{const ix=DATA.items.map((_,i)=>i).filter(i=>DATA.items[i].c===c);
+/* My items page: one section per item category plus one for titles. ENT = every row on the page (items first, then titles) */
+const ENT=[...DATA.items.map(it=>({T:0,it,key:it.n,cat:it.c})),...TT.map(t=>({T:1,it:t,key:'t:'+t.i,cat:'Titles'}))];
+const isOwn=e=>e.T?TOWN.has(e.it.i):ownedSet.has(e.it.n);
+const CATS=[...new Set(ENT.map(e=>e.cat))];
+const bf=o=>Object.keys(o).map(k=>k+' '+fmt(k,o[k])).join(', ');
+const rowHtml=i=>{const e=ENT[i],it=e.it,tags=e.T?[it.c,it.r].join(' · '):[it.k!==it.c?it.k:'',it.cl,it.fl].filter(Boolean).join(' · ');
+  const tip=e.T?`${it.d}\nEquipped: ${bf(it.b)||'none'}\nCollection (once unlocked): ${bf(it.cb)||'none'}`:'';
+  const exTip=e.T?'Never suggest this title for a slot (its collection bonus still counts while it is unlocked)':'Do not include in calculation';
+  return`<div class="row" data-i="${i}"><label class="own"${tip?` title="${esc(tip).replace(/"/g,'&quot;')}"`:''}><input type="checkbox" data-p="${i}">${dot(e.T?{r:TR[it.r]||1}:it)}<span class="nm">${esc(it.n)}</span><span class="k">${esc(tags)}</span></label><label class="ex" title="${exTip}"><input type="checkbox" data-x="${i}">Exclude</label></div>`};
+$('items-cats').innerHTML=CATS.map(c=>{const ix=ENT.map((_,i)=>i).filter(i=>ENT[i].cat===c);
   return`<section class="cat" data-c="${esc(c)}"><div class="cat-head"><h2>${esc(c)}<span class="num" data-cc></span></h2><div class="cat-btns"><button type="button" class="btn" data-a="on">Tick shown</button><button type="button" class="btn" data-a="off">Untick shown</button></div></div><div class="cat-grid">${ix.map(rowHtml).join('')}</div></section>`}).join('');
-$('pg-chips').innerHTML='<button type="button" class="btn hide" id="pg-exchip" aria-pressed="false" data-exchip title="Show only items left out of the calculation">Unincluded <span class="num" id="pg-exnum"></span></button>'+CATS.map(c=>`<button type="button" class="btn" data-chip="${esc(c)}">${esc(c)} <span class="num"></span></button>`).join('');
+$('pg-chips').innerHTML='<button type="button" class="btn hide" id="pg-exchip" aria-pressed="false" data-exchip title="Show only items and titles left out of the calculation">Unincluded <span class="num" id="pg-exnum"></span></button>'+CATS.map(c=>`<button type="button" class="btn" data-chip="${esc(c)}">${esc(c)} <span class="num"></span></button>`).join('');
 const pgRows=[];document.querySelectorAll('#items-cats .row').forEach(l=>{pgRows[+l.dataset.i]=l});
 const pgSecs=[...document.querySelectorAll('#items-cats .cat')];
 function syncOwn(){
-  const tot=DATA.items.filter(i=>ownedSet.has(i.n)).length;
-  $('pg-total').textContent=tot+' of '+DATA.items.length+' owned';
-  pgRows.forEach((r,i)=>{const o=ownedSet.has(DATA.items[i].n);r.querySelector('[data-p]').checked=o;r.classList.toggle('on',o)});
-  pgSecs.forEach(sec=>{const ix=[...sec.querySelectorAll('.row')].map(l=>+l.dataset.i),o=ix.filter(i=>ownedSet.has(DATA.items[i].n)).length;
-    sec.querySelector('[data-cc]').textContent=o+' of '+ix.length+' owned';
+  const io=DATA.items.filter(i=>ownedSet.has(i.n)).length,to=TT.filter(t=>TOWN.has(t.i)).length;
+  $('pg-total').textContent=io+' of '+DATA.items.length+' items owned · '+to+' of '+TT.length+' titles unlocked';
+  pgRows.forEach((r,i)=>{const o=isOwn(ENT[i]);r.querySelector('[data-p]').checked=o;r.classList.toggle('on',o)});
+  pgSecs.forEach(sec=>{const ix=[...sec.querySelectorAll('.row')].map(l=>+l.dataset.i),o=ix.filter(i=>isOwn(ENT[i])).length;
+    sec.querySelector('[data-cc]').textContent=o+' of '+ix.length+(sec.dataset.c==='Titles'?' unlocked':' owned');
     document.querySelector(`#pg-chips [data-chip="${sec.dataset.c}"] .num`).textContent=o+'/'+ix.length})}
 function syncEx(){
   const n=exSet.size;
   if(!n)exOnly=false;
-  pgRows.forEach((r,i)=>{const x=exSet.has(DATA.items[i].n);r.querySelector('[data-x]').checked=x;r.classList.toggle('ex-on',x)});
+  pgRows.forEach((r,i)=>{const x=exSet.has(ENT[i].key);r.querySelector('[data-x]').checked=x;r.classList.toggle('ex-on',x)});
   $('nav-badge').textContent=n;$('nav-badge').classList.toggle('hide',!n);
   $('nav-items').setAttribute('aria-label',n?'My items, '+n+' left out of the calculation':'My items');
   $('pg-exnum').textContent=n;$('pg-exchip').classList.toggle('hide',!n);
@@ -166,15 +177,16 @@ function syncEx(){
   $('pg-exclear').classList.toggle('hide',!n)}
 function pgFilter(){
   const w=$('pg-q').value.trim().toLowerCase().split(/\s+/),f=$('pg-f').value;let shown=0;
-  DATA.items.forEach((it,i)=>{const o=ownedSet.has(it.n),t=[it.n,it.c,it.k,it.cl,it.fl,it.ser].filter(Boolean).join(' ').toLowerCase();
-    const ok=w.every(x=>t.includes(x))&&(f==='all'||(f==='yes')===o)&&(!exOnly||exSet.has(it.n));
+  ENT.forEach((e,i)=>{const it=e.it,o=isOwn(e),
+    t=(e.T?[it.n,'title',it.c,it.r,...Object.keys(it.b),...Object.keys(it.cb)]:[it.n,it.c,it.k,it.cl,it.fl,it.ser]).filter(Boolean).join(' ').toLowerCase();
+    const ok=w.every(x=>t.includes(x))&&(f==='all'||(f==='yes')===o)&&(!exOnly||exSet.has(e.key));
     pgRows[i].classList.toggle('hide',!ok);if(ok)shown++});
   pgSecs.forEach(sec=>sec.classList.toggle('hide',!sec.querySelector('.row:not(.hide)')));
   $('pg-empty').classList.toggle('hide',shown>0);$('pg-shown').textContent='· '+shown+' shown'}
-function setMany(ixs,on){ixs.forEach(i=>{const n=DATA.items[i].n;on?ownedSet.add(n):ownedSet.delete(n)});saveOwned();syncOwn();rerun()}
-function setEx(ixs,on){ixs.forEach(i=>{const n=DATA.items[i].n;on?exSet.add(n):exSet.delete(n)});saveEx();syncEx();pgFilter();rerun()}
+function setMany(ixs,on){ixs.forEach(i=>{const e=ENT[i],set=e.T?TOWN:ownedSet,n=e.T?e.it.i:e.it.n;on?set.add(n):set.delete(n)});saveOwned();saveTown();syncOwn();rerun()}
+function setEx(ixs,on){ixs.forEach(i=>{const k=ENT[i].key;on?exSet.add(k):exSet.delete(k)});saveEx();syncEx();pgFilter();rerun()}
 function clearEx(){exSet.clear();saveEx();syncEx();pgFilter();rerun()}
-function resetOwn(){ownedSet=new Set(DATA.owned);try{localStorage.removeItem(OWN_KEY)}catch(e){}syncOwn();pgFilter();rerun()}
+function resetOwn(){ownedSet=new Set(DATA.owned);TOWN=new Set(DATA.titlesOwned||[]);try{localStorage.removeItem(OWN_KEY);localStorage.removeItem(TOWN_KEY)}catch(e){}syncOwn();pgFilter();rerun()}
 const shownIx=(rows,root)=>rows.map((r,i)=>i).filter(i=>rows[i]&&!rows[i].classList.contains('hide')&&(!root||root.contains(rows[i])));
 /* events */
 $('items-page').addEventListener('input',e=>e.stopPropagation());

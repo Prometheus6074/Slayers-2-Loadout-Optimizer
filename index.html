@@ -59,11 +59,11 @@
 </div>
 <div id="items-page" class="hide">
 <div class="panel">
-<div class="i-tools"><input type="search" id="pg-q" placeholder="Search by name, class, category or tag (event, faction only…)" aria-label="Search items"><button type="button" class="btn pri" id="pg-go">Search</button><button type="button" class="btn" id="pg-clear">Clear</button>
-<select id="pg-f" aria-label="Show"><option value="all">All items</option><option value="yes">Owned only</option><option value="no">Not owned only</option></select></div>
+<div class="i-tools"><input type="search" id="pg-q" placeholder="Search by name, class, category, stat or tag (event, title, faction only…)" aria-label="Search items"><button type="button" class="btn pri" id="pg-go">Search</button><button type="button" class="btn" id="pg-clear">Clear</button>
+<select id="pg-f" aria-label="Show"><option value="all">All items</option><option value="yes">Owned / unlocked only</option><option value="no">Not owned / locked only</option></select></div>
 <div class="i-sum" style="margin-top:12px"><span><b class="num" id="pg-total"></b> <span class="hint" id="pg-shown"></span></span>
 <span class="cat-btns"><button type="button" class="btn" id="pg-all">Tick all shown</button><button type="button" class="btn" id="pg-none">Untick all shown</button><button type="button" class="btn" id="pg-reset">Reset to save</button><button type="button" class="btn hide" id="pg-exclear">Clear exclusions</button></span></div>
-<p class="hint" style="margin-top:12px">Tick <b>Exclude</b> on any item to leave it out of the calculation, even if you own it.</p>
+<p class="hint" style="margin-top:12px">Tick <b>Exclude</b> to leave an item out of the calculation, even if you own it. For titles, the tick means unlocked, and Exclude keeps a title out of the 3 slots.</p>
 <div class="chips" id="pg-chips" style="margin-top:12px" role="group" aria-label="Jump to category"></div>
 </div>
 <div id="items-cats" style="display:grid;gap:16px"></div>

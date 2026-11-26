@@ -35,6 +35,16 @@ const TR={Common:1,Rare:3,Epic:4,Legendary:5,Mythic:6,Impossible:7,'Impossible L
 const tvec=o=>{const v=new Array(D).fill(0);for(const k in o)if(I[k]!==undefined)v[I[k]]=o[k];return v};
 const tadd=(a,b)=>{const o={...a};for(const k in b)o[k]=(o[k]||0)+b[k];return o};
 const collVec=()=>total(TT.filter(t=>TOWN.has(t.i)).map(t=>tvec(t.cb)));
+/* loadouts: what is "equipped" for the comparison column. Starts as the save's current set (Loadout 1) + an empty Loadout 2 */
+const LO_KEY='ouwland-loadouts';
+let LO={sel:0,list:[{name:'Loadout 1',items:DATA.cur.map(c=>({n:c.n,t:c.t,rf:c.rf})),titles:[...(DATA.curTitles||[])]},{name:'Loadout 2',items:[],titles:[]}]};
+try{const sv=JSON.parse(localStorage.getItem(LO_KEY));
+  if(sv&&Array.isArray(sv.list)&&sv.list.length>=2){
+    LO={sel:Math.min(Math.max(+sv.sel||0,0),sv.list.length-1),list:sv.list.map(l=>({name:String(l.name||'').slice(0,24),
+      items:(l.items||[]).filter(c=>byName[c.n]).map(c=>({n:c.n,t:+c.t||1,rf:+c.rf||0})),titles:(l.titles||[]).filter(i=>tById[i])}))}}}catch(e){}
+const saveLo=()=>{try{localStorage.setItem(LO_KEY,JSON.stringify(LO))}catch(e){}};
+const loName=i=>LO.list[i].name.trim()||'Loadout '+(i+1);
+let last=null;/* the suggestion on screen, so "Equip" knows what to save */
 function metrics(T,p){
   const g=n=>T[I[n]];
   const hit=(p.base+g('Additional Damage'))*(1+g('Additional Damage Factor'));
@@ -79,6 +89,7 @@ const fmt=(k,v)=>{if(BOOL.has(k))return'Yes';if(/Factor|Regen|Crit/.test(k)&&!/^
 const n2=(x,d=1)=>(Math.round(x*10**d)/10**d).toLocaleString('en',{maximumFractionDigits:d});
 const GOALS={exp:['Damage per hit (with crits)',v=>n2(v,2)],hit:['Hit damage',v=>n2(v,2)],crit:['Crit hit damage',v=>n2(v,2)],hp:['Max HP',v=>n2(v,0)],def:['Defense (hits you can take, any hit size)',v=>n2(v,2)],sta:['Max stamina',v=>n2(v,0)],spd:['Movement speed',v=>'×'+n2(v,3)],custom:['Custom score',v=>n2(v,2)]};
 function run(){
+  last=null;
   const p=params(),f=scorer(p),tier=+$('tier').value,rl=+$('refine').value;
   for(const[id,sh]of[['f-dmg',['exp','hit','crit']],['f-hp',['hp','def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal));
   $('f-rng').classList.toggle('hide',p.goal!=='def');
@@ -113,12 +124,14 @@ function run(){
     res.cut=cut}
   else res=pick(C,fi);
   const out=$('out');
-  if(!res.set){out.innerHTML='<div class="empty">No items match these filters.</div>';return}
+  if(!res.set){out.innerHTML='<div class="empty">No items match these filters.</div>';syncLoBar();return}
   const set=res.set.filter(c=>!c.T).sort((a,b)=>a.c.localeCompare(b.c)||a.k.localeCompare(b.k)),tis=res.set.filter(c=>c.T).sort((a,b)=>a.n.localeCompare(b.n));
-  const cur=DATA.cur.map(c=>vec(byName[c.n],c.t,c.rf)),ctv=tOn?(DATA.curTitles||[]).map(i=>tById[i]).filter(Boolean).map(t=>tvec(t.b)):[];
+  last={set:set.slice(),tis:tis.slice(),tier,rl};
+  const lo=LO.list[LO.sel],cur=lo.items.map(c=>vec(byName[c.n],c.t,c.rf)),
+    ctv=tOn?lo.titles.map(i=>tById[i]).map(t=>tvec(TOWN.has(t.i)?t.b:tadd(t.b,t.cb))):[],emp=!cur.length&&!ctv.length;
   const T=total([BASE,...set.map(c=>c.v),...tis.map(c=>c.v)]),TC=total([BASE,...cur,...ctv]);
   const M=metrics(T,p),MC=metrics(TC,p),g=GOALS[p.goal];
-  const sc=f(T),scc=f(TC),dl=scc?(sc/scc-1)*100:0;
+  const sc=f(T),scc=f(TC);
   const card=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">${c.k}</span><h3>${c.n}</h3>
   <div class="tags">${c.cl?`<span class="tag">${c.cl}</span>`:''}${c.ser?`<span class="tag set">${c.ser} set</span>`:''}${ownedSet.has(c.n)?'<span class="tag own">owned</span>':''}${c.fl?`<span class="tag">${c.fl}</span>`:''}</div>
   <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul></div>`;
@@ -128,16 +141,17 @@ function run(){
   const tsec=tOn?`<h2 class="sub">Titles <span class="hint">· ${TSLOTS} boost slots</span></h2>${tis.length?`<div class="slots">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}
   <p class="hint" style="margin:-4px 0 16px">Also counted: the collection bonus of your ${TT.filter(t=>TOWN.has(t.i)&&Object.keys(t.cb).length).length} unlocked titles (always on, no slot needed).</p>`:'';
   const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
-  const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return`<tr class="${key?'key':''}"><td>${l}</td><td class="num">${fm(a)}</td><td class="num">${fm(b)}</td><td class="num ${d>0.05?'up':d<-0.05?'dn':''}">${Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%'}</td></tr>`};
-  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||TC[d]).map(([k,d])=>`<tr><td>${k}</td><td class="num">${fmt(k,T[d])}</td><td class="num">${fmt(k,TC[d])}</td><td class="num ${T[d]>TC[d]?'up':T[d]<TC[d]?'dn':''}">${T[d]===TC[d]?'':fmt(k,T[d]-TC[d])}</td></tr>`).join('');
+  const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return`<tr class="${key?'key':''}"><td>${l}</td><td class="num">${fm(a)}</td><td class="num">${emp?'—':fm(b)}</td><td class="num ${emp?'':d>0.05?'up':d<-0.05?'dn':''}">${emp?'':Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%'}</td></tr>`};
+  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||(!emp&&TC[d])).map(([k,d])=>`<tr><td>${k}</td><td class="num">${fmt(k,T[d])}</td><td class="num">${emp?'—':fmt(k,TC[d])}</td><td class="num ${emp?'':T[d]>TC[d]?'up':T[d]<TC[d]?'dn':''}">${emp||T[d]===TC[d]?'':fmt(k,T[d]-TC[d])}</td></tr>`).join('');
+  const eqh=`Equipped · ${esc(loName(LO.sel))}`;
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><span class="score num">${g[1](sc)}</span></div>
   ${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots">${set.map(card).join('')}</div>
   ${tsec}
-  <div class="tw"><table><thead><tr><th>Result</th><th>Suggested</th><th>Equipped now</th><th>Change</th></tr></thead><tbody>
+  <div class="tw"><table><thead><tr><th>Result</th><th>Suggested</th><th>${eqh}</th><th>Change</th></tr></thead><tbody>
   ${dm.map(([k,l])=>row(l,M[k],MC[k],GOALS[k][1],k===p.goal)).join('')}
   ${p.goal==='custom'?row('Custom score',sc,scc,v=>n2(v,2),true):''}</tbody></table></div>
-  <div class="tw" style="margin-top:12px"><table><thead><tr><th>Stat totals</th><th>Suggested</th><th>Equipped now</th><th>Change</th></tr></thead><tbody>${sr}</tbody></table></div>`}
+  <div class="tw" style="margin-top:12px"><table><thead><tr><th>Stat totals</th><th>Suggested</th><th>${eqh}</th><th>Change</th></tr></thead><tbody>${sr}</tbody></table></div>`;syncLoBar()}
 let tm;document.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(run,120)});
 
 const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
@@ -199,10 +213,33 @@ $('pg-q').addEventListener('input',pgFilter);$('pg-q').addEventListener('keydown
 $('pg-go').onclick=pgFilter;$('pg-f').addEventListener('change',pgFilter);
 $('pg-clear').onclick=()=>{$('pg-q').value='';$('pg-f').value='all';pgFilter();$('pg-q').focus()};
 $('pg-all').onclick=()=>setMany(shownIx(pgRows),true);$('pg-none').onclick=()=>setMany(shownIx(pgRows),false);$('pg-reset').onclick=resetOwn;$('pg-exclear').onclick=clearEx;
+/* loadout bar */
+function renderLoBar(){
+  const many=LO.list.length>2;
+  $('lo-tabs').innerHTML=LO.list.map((l,i)=>`<span class="lo-tab${i===LO.sel?' on':''}"><button type="button" class="btn" data-lo="${i}" aria-pressed="${i===LO.sel}">${esc(loName(i))}</button>${many?`<button type="button" class="lo-x" data-lo-del="${i}" aria-label="Delete ${esc(loName(i))}" title="Delete this loadout">×</button>`:''}</span>`).join('');
+  $('lo-name').value=LO.list[LO.sel].name;$('lo-name').placeholder='Loadout '+(LO.sel+1);
+  syncLoBar()}
+function syncLoBar(){
+  const lo=LO.list[LO.sel],n=lo.items.length,t=lo.titles.length;
+  $('lo-equip').disabled=!last;$('lo-equip').textContent='Equip suggested set to '+loName(LO.sel);
+  $('lo-hint').textContent=n||t?'Currently equipped: '+n+' item'+(n===1?'':'s')+', '+t+' title'+(t===1?'':'s'):'Empty — equip the suggested set to compare against it.'}
+function pickLo(i){LO.sel=i;saveLo();renderLoBar();clearTimeout(tm);run()}
+$('lo-tabs').addEventListener('click',e=>{
+  const x=e.target.closest('[data-lo-del]'),b=e.target.closest('[data-lo]');
+  if(x){if(LO.list.length<=2)return;const i=+x.dataset.loDel;
+    if(!confirm('Delete "'+loName(i)+'"?'))return;
+    LO.list.splice(i,1);if(i<LO.sel)LO.sel--;LO.sel=Math.min(LO.sel,LO.list.length-1);saveLo();renderLoBar();clearTimeout(tm);run()}
+  else if(b)pickLo(+b.dataset.lo)});
+$('lo-add').onclick=()=>{let k=LO.list.length+1;while(LO.list.some(l=>l.name.trim()==='Loadout '+k))k++;
+  LO.list.push({name:'Loadout '+k,items:[],titles:[]});pickLo(LO.list.length-1)};
+$('lo-name').addEventListener('input',e=>{LO.list[LO.sel].name=e.target.value.slice(0,24);saveLo();
+  const b=document.querySelector(`#lo-tabs [data-lo="${LO.sel}"]`);if(b)b.textContent=loName(LO.sel);syncLoBar()});
+$('lo-equip').onclick=()=>{if(!last)return;const lo=LO.list[LO.sel];
+  lo.items=last.set.map(c=>({n:c.n,t:last.tier,rf:last.rl}));lo.titles=last.tis.map(c=>c.i);saveLo();clearTimeout(tm);run()};
 /* page routing: #optimizer (default) and #my-items */
 function route(){const pg=location.hash==='#my-items';view=pg?'items':'opt';
   document.querySelector('.wrap').classList.toggle('hide',pg);$('items-page').classList.toggle('hide',!pg);
   $('nav-opt').setAttribute('aria-current',pg?'false':'page');$('nav-items').setAttribute('aria-current',pg?'page':'false');
   if(!pg&&dirty){dirty=false;run()}}
 window.addEventListener('hashchange',()=>{route();window.scrollTo(0,0)});
-syncOwn();syncEx();pgFilter();route();
+syncOwn();syncEx();pgFilter();renderLoBar();route();

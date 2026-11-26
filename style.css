@@ -16,7 +16,7 @@ header p{margin:6px 0 0;color:var(--mute);max-width:70ch}
 .ctl h2{font-size:18px}
 label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
 label.row{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:14px}
-select,input[type=number],input[type=search]{font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+select,input[type=number],input[type=search],input[type=text]{font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
 input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -82,3 +82,16 @@ tr.key td{background:var(--soft);font-weight:600}
 .cat-grid .nm{flex:1;min-width:0}
 .cat-grid .k{font-size:11px;color:var(--mute);text-align:right}
 
+
+.lo{display:grid;gap:10px;margin-bottom:16px}
+.lo-tabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lo-tab{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:99px;background:var(--soft);overflow:hidden}
+.lo-tab .btn{border:0;background:transparent;border-radius:0;padding:6px 14px}
+.lo-tab:hover{border-color:var(--acc)}
+.lo-tab.on{background:var(--acc);border-color:var(--acc)}
+.lo-tab.on .btn,.lo-tab.on .lo-x{color:var(--accink)}
+.lo-x{border:0;background:transparent;color:var(--mute);cursor:pointer;padding:0 12px 0 0;font:inherit;font-size:18px;line-height:1}
+.lo-x:hover{opacity:.7}
+.lo-act{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.lo-name{flex:1 1 180px;max-width:280px}
+.btn:disabled{opacity:.5;cursor:not-allowed}

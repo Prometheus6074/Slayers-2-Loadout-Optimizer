@@ -95,3 +95,6 @@ tr.key td{background:var(--soft);font-weight:600}
 .lo-act{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .lo-name{flex:1 1 180px;max-width:280px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+
+.qx{display:flex;align-items:center;gap:6px;margin-top:4px;padding-top:6px;border-top:1px solid var(--line);font-size:12px;color:var(--mute);cursor:pointer}
+.exnote{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}

@@ -44,7 +44,7 @@ try{const sv=JSON.parse(localStorage.getItem(LO_KEY));
       items:(l.items||[]).filter(c=>byName[c.n]).map(c=>({n:c.n,t:+c.t||1,rf:+c.rf||0})),titles:(l.titles||[]).filter(i=>tById[i])}))}}}catch(e){}
 const saveLo=()=>{try{localStorage.setItem(LO_KEY,JSON.stringify(LO))}catch(e){}};
 const loName=i=>LO.list[i].name.trim()||'Loadout '+(i+1);
-let last=null;/* the suggestion on screen, so "Equip" knows what to save */
+let last=null,lastEx=null;/* the suggestion on screen, so "Equip" knows what to save */
 function metrics(T,p){
   const g=n=>T[I[n]];
   const hit=(p.base+g('Additional Damage'))*(1+g('Additional Damage Factor'));
@@ -132,12 +132,15 @@ function run(){
   const T=total([BASE,...set.map(c=>c.v),...tis.map(c=>c.v)]),TC=total([BASE,...cur,...ctv]);
   const M=metrics(T,p),MC=metrics(TC,p),g=GOALS[p.goal];
   const sc=f(T),scc=f(TC);
+  const qx=k=>`<label class="qx" title="Leave this out of the calculation and show the next best"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
+  if(lastEx&&!exSet.has(lastEx.k))lastEx=null;
+  const exNote=lastEx?`<p class="hint exnote">Excluded <b>${esc(lastEx.name)}</b> from the calculation. <button type="button" class="btn" data-undo>Undo</button></p>`:'';
   const card=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">${c.k}</span><h3>${c.n}</h3>
   <div class="tags">${c.cl?`<span class="tag">${c.cl}</span>`:''}${c.ser?`<span class="tag set">${c.ser} set</span>`:''}${ownedSet.has(c.n)?'<span class="tag own">owned</span>':''}${c.fl?`<span class="tag">${c.fl}</span>`:''}</div>
-  <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul></div>`;
+  <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx(c.n)}</div>`;
   const tcard=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">Title · ${c.rar}</span><h3>${esc(c.n)}</h3>
   <div class="tags">${c.lock?'<span class="tag">locked · incl. its unlock bonus</span>':'<span class="tag own">unlocked</span>'}</div>
-  <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul></div>`;
+  <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx('t:'+c.i)}</div>`;
   const tsec=tOn?`<h2 class="sub">Titles <span class="hint">· ${TSLOTS} boost slots</span></h2>${tis.length?`<div class="slots">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}
   <p class="hint" style="margin:-4px 0 16px">Also counted: the collection bonus of your ${TT.filter(t=>TOWN.has(t.i)&&Object.keys(t.cb).length).length} unlocked titles (always on, no slot needed).</p>`:'';
   const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
@@ -145,7 +148,7 @@ function run(){
   const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||(!emp&&TC[d])).map(([k,d])=>`<tr><td>${k}</td><td class="num">${fmt(k,T[d])}</td><td class="num">${emp?'—':fmt(k,TC[d])}</td><td class="num ${emp?'':T[d]>TC[d]?'up':T[d]<TC[d]?'dn':''}">${emp||T[d]===TC[d]?'':fmt(k,T[d]-TC[d])}</td></tr>`).join('');
   const eqh=`Equipped · ${esc(loName(LO.sel))}`;
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><span class="score num">${g[1](sc)}</span></div>
-  ${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
+  ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots">${set.map(card).join('')}</div>
   ${tsec}
   <div class="tw"><table><thead><tr><th>Result</th><th>Suggested</th><th>${eqh}</th><th>Change</th></tr></thead><tbody>
@@ -213,6 +216,10 @@ $('pg-q').addEventListener('input',pgFilter);$('pg-q').addEventListener('keydown
 $('pg-go').onclick=pgFilter;$('pg-f').addEventListener('change',pgFilter);
 $('pg-clear').onclick=()=>{$('pg-q').value='';$('pg-f').value='all';pgFilter();$('pg-q').focus()};
 $('pg-all').onclick=()=>setMany(shownIx(pgRows),true);$('pg-none').onclick=()=>setMany(shownIx(pgRows),false);$('pg-reset').onclick=resetOwn;$('pg-exclear').onclick=clearEx;
+/* quick exclude from the suggestion cards (plus undo) */
+function quickEx(k){exSet.add(k);saveEx();lastEx={k,name:k.startsWith('t:')?tById[k.slice(2)].n:k};syncEx();pgFilter();clearTimeout(tm);run()}
+$('out').addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.qx;if(k!=null)quickEx(k)});
+$('out').addEventListener('click',e=>{if(e.target.closest('[data-undo]')&&lastEx){exSet.delete(lastEx.k);lastEx=null;saveEx();syncEx();pgFilter();clearTimeout(tm);run()}});
 /* loadout bar */
 function renderLoBar(){
   const many=LO.list.length>2;

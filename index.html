@@ -11,7 +11,7 @@
 <header>
 <h1>Ouwland loadout optimizer</h1>
 <p>Picks the best five stat items from the 302 wearables in the game files for the goal you choose. Results update as you change anything.</p>
-<nav class="nav" aria-label="Pages"><a id="nav-opt" href="#optimizer" aria-current="page">Optimizer</a><a id="nav-items" href="#my-items">My items</a></nav>
+<nav class="nav" aria-label="Pages"><a id="nav-opt" href="#optimizer" aria-current="page">Optimizer</a><a id="nav-items" href="#my-items">My items<span class="badge hide" id="nav-badge" title="Items left out of the calculation"></span></a></nav>
 </header>
 <div class="wrap">
 <aside class="panel ctl">
@@ -60,7 +60,8 @@
 <div class="i-tools"><input type="search" id="pg-q" placeholder="Search by name, class, category or tag (event, faction only…)" aria-label="Search items"><button type="button" class="btn pri" id="pg-go">Search</button><button type="button" class="btn" id="pg-clear">Clear</button>
 <select id="pg-f" aria-label="Show"><option value="all">All items</option><option value="yes">Owned only</option><option value="no">Not owned only</option></select></div>
 <div class="i-sum" style="margin-top:12px"><span><b class="num" id="pg-total"></b> <span class="hint" id="pg-shown"></span></span>
-<span class="cat-btns"><button type="button" class="btn" id="pg-all">Tick all shown</button><button type="button" class="btn" id="pg-none">Untick all shown</button><button type="button" class="btn" id="pg-reset">Reset to save</button></span></div>
+<span class="cat-btns"><button type="button" class="btn" id="pg-all">Tick all shown</button><button type="button" class="btn" id="pg-none">Untick all shown</button><button type="button" class="btn" id="pg-reset">Reset to save</button><button type="button" class="btn hide" id="pg-exclear">Clear exclusions</button></span></div>
+<p class="hint" style="margin-top:12px">Tick <b>Exclude</b> on any item to leave it out of the calculation, even if you own it.</p>
 <div class="chips" id="pg-chips" style="margin-top:12px" role="group" aria-label="Jump to category"></div>
 </div>
 <div id="items-cats" style="display:grid;gap:16px"></div>

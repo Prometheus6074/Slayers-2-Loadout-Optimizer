@@ -49,8 +49,9 @@ tr.key td{background:var(--soft);font-weight:600}
 .warn{color:var(--bad);font-size:13px;margin:0 0 10px}
 .empty{padding:30px;text-align:center;color:var(--mute)}
 .nav{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
-.nav a{font-size:14px;font-weight:500;color:var(--ink);text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:6px 16px}
+.nav a{display:inline-flex;align-items:center;font-size:14px;font-weight:500;color:var(--ink);text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:6px 16px}
 .nav a:hover{border-color:var(--acc)}
+.badge{margin-left:8px;min-width:20px;padding:0 6px;border-radius:99px;background:var(--gold);color:var(--panel);font-size:12px;font-weight:600;line-height:20px;text-align:center;font-variant-numeric:tabular-nums}
 .nav a[aria-current=page]{background:var(--acc);border-color:var(--acc);color:var(--accink)}
 .btn{font:inherit;font-size:13px;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
 .btn:hover{border-color:var(--acc)}
@@ -68,10 +69,15 @@ tr.key td{background:var(--soft);font-weight:600}
 .cat-head h2{font-size:20px}
 .cat-head .num{color:var(--mute);font-size:14px;font-weight:400;font-family:"IBM Plex Sans",system-ui,sans-serif;margin-left:6px}
 .cat-btns{display:flex;gap:6px}
-.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px 12px}
-.cat-grid label.row{font-size:13px;padding:5px 8px;border-radius:6px;gap:8px;cursor:pointer}
-.cat-grid label.row:hover{background:var(--soft)}
-.cat-grid label.row.on{background:var(--soft)}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 12px}
+.cat-grid .row{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 8px;border-radius:6px}
+.cat-grid .row:hover,.cat-grid .row.on{background:var(--soft)}
+.cat-grid .row>label.own{display:flex;align-items:center;flex:1;min-width:0;gap:8px;color:var(--ink);font-size:13px;cursor:pointer}
+.cat-grid .row>label.ex{display:flex;align-items:center;flex:none;gap:4px;color:var(--mute);font-size:12px;cursor:pointer}
+.cat-grid .row.ex-on .nm{text-decoration:line-through;opacity:.6}
+.cat-grid .row.ex-on>label.ex{color:var(--gold);font-weight:600}
+.chips .btn.active{background:var(--acc);border-color:var(--acc);color:var(--accink)}
+.chips .btn.active .num{color:inherit}
 .cat-grid .nm{flex:1;min-width:0}
 .cat-grid .k{font-size:11px;color:var(--mute);text-align:right}
 

@@ -46,6 +46,7 @@ th{font-weight:500;color:var(--mute);font-size:13px}
 tr.key td{background:var(--soft);font-weight:600}
 .up{color:var(--good)}.dn{color:var(--bad)}
 .tw{overflow-x:auto}
+.sub{font-size:18px;margin:0 0 10px}
 .warn{color:var(--bad);font-size:13px;margin:0 0 10px}
 .empty{padding:30px;text-align:center;color:var(--mute)}
 .nav{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}

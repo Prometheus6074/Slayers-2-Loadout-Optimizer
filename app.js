@@ -23,6 +23,12 @@ function vec(it,tier,rl){
     v[I[k]]=x}
   return v}
 function total(vs){const T=new Array(D).fill(0);for(const v of vs)for(let d=0;d<D;d++)T[d]=HI[d]?Math.max(T[d],v[d]):T[d]+v[d];return T}
+/* titles: 3 boost slots (their buffs) + the collection bonus of every unlocked title (always on) */
+const TT=DATA.titles||[],TOWN=new Set(DATA.titlesOwned||[]),TSLOTS=3,tById=Object.fromEntries(TT.map(t=>[t.i,t]));
+const TR={Common:1,Rare:3,Epic:4,Legendary:5,Mythic:6,Impossible:7,'Impossible Limited':7};
+const tvec=o=>{const v=new Array(D).fill(0);for(const k in o)if(I[k]!==undefined)v[I[k]]=o[k];return v};
+const tadd=(a,b)=>{const o={...a};for(const k in b)o[k]=(o[k]||0)+b[k];return o};
+const COLL=total(TT.filter(t=>TOWN.has(t.i)).map(t=>tvec(t.cb)));
 function metrics(T,p){
   const g=n=>T[I[n]];
   const hit=(p.base+g('Additional Damage'))*(1+g('Additional Damage Factor'));
@@ -35,25 +41,33 @@ function hitSizes(){const lo=Math.max(1,nz('dlo',5)),hi=Math.max(lo,nz('dhi',500
 function params(){return{hs:hitSizes(),base:nz('base',3),cc:nz('cc',0)/100,cb:nz('cb',50)/100,hp:nz('hp',100),goal:$('goal').value,
   w:ST.map(k=>Math.max(0,parseFloat(document.querySelector(`[data-w="${k}"]`).value)||0))}}
 function scorer(p){return p.goal==='custom'?T=>T.reduce((a,x,d)=>a+x*p.w[d],0):T=>metrics(T,p)[p.goal]}
-function solve(C,f,S,oneCat,fs){
+function solve(C,f,S,oneCat,fs,base,TQ){
+  base=base||new Array(D).fill(0);TQ=TQ||0;
   const N=C.length;
-  C.forEach(c=>c.sc=f(total([c.v])));C.sort((a,b)=>b.sc-a.sc);
-  const top=new Array(N+1);top[N]=ST.map(()=>[]);
-  for(let i=N-1;i>=0;i--)top[i]=top[i+1].map((a,d)=>{const b=a.slice(),x=C[i].v[d];if(x>0){b.push(x);b.sort((p,q)=>q-p);if(b.length>5)b.pop()}return b});
-  const ub=(T,i,r)=>{const U=T.slice();for(let d=0;d<D;d++){const t=top[i][d];if(HI[d]){if(t.length&&t[0]>U[d])U[d]=t[0]}else for(let q=0;q<r&&q<t.length;q++)U[d]+=t[q]}return f(U)};
+  C.forEach(c=>c.sc=f(total([base,c.v])));C.sort((a,b)=>b.sc-a.sc);
+  /* per group (items / titles): best values per stat in each suffix, and how many candidates are left */
+  const mk=(isT,K)=>{const t=new Array(N+1);t[N]=ST.map(()=>[]);
+    for(let i=N-1;i>=0;i--)t[i]=(!!C[i].T===isT)?t[i+1].map((a,d)=>{const b=a.slice(),x=C[i].v[d];if(x>0){b.push(x);b.sort((p,q)=>q-p);if(b.length>K)b.pop()}return b}):t[i+1];
+    return t};
+  const topI=mk(false,5),topT=mk(true,TSLOTS),cI=new Array(N+1).fill(0),cT=new Array(N+1).fill(0);
+  for(let i=N-1;i>=0;i--){cI[i]=cI[i+1]+(C[i].T?0:1);cT[i]=cT[i+1]+(C[i].T?1:0)}
+  const ub=(T,i,rI,rT)=>{const U=T.slice();for(let d=0;d<D;d++)for(const[tp,r]of[[topI,rI],[topT,rT]]){const t=tp[i][d];if(HI[d]){if(t.length&&t[0]>U[d])U[d]=t[0]}else for(let q=0;q<r&&q<t.length;q++)U[d]+=t[q]}return f(U)};
   let best=-1,bs=null,nodes=0,cut=false;const used=new Set();
   const keys=c=>{const k=[];if(oneCat)k.push('c:'+c.k);if(c.x)k.push(c.x);return k};
   if(fs)keys(fs).forEach(k=>used.add(k));
-  (function dfs(i,set,T){
-    const r=S-set.length;
-    if(!r){const s=f(T);if(s>best){best=s;bs=set.slice()}return}
-    for(let j=i;j<=N-r;j++){
+  const set=fs?[fs]:[];
+  (function dfs(i,rI,rT,T){
+    if(!rI&&!rT){const s=f(T);if(s>best){best=s;bs=set.slice()}return}
+    for(let j=i;j<N;j++){
+      if(cI[j]<rI||cT[j]<rT)break;
       if(++nodes>3e6){cut=true;return}
-      if(ub(T,j,r)<=best+1e-12)break;
-      const c=C[j],ks=keys(c);if(ks.some(k=>used.has(k)))continue;
-      ks.forEach(k=>used.add(k));set.push(c);dfs(j+1,set,total([T,c.v]));
-      set.pop();ks.forEach(k=>used.delete(k));if(cut)return}
-  })(0,fs?[fs]:[],fs?total([fs.v]):new Array(D).fill(0));
+      if(ub(T,j,rI,rT)<=best+1e-12)break;
+      const c=C[j];
+      if(c.T){if(!rT)continue;set.push(c);dfs(j+1,rI,rT-1,total([T,c.v]));set.pop()}
+      else{if(!rI)continue;const ks=keys(c);if(ks.some(k=>used.has(k)))continue;
+        ks.forEach(k=>used.add(k));set.push(c);dfs(j+1,rI-1,rT,total([T,c.v]));set.pop();ks.forEach(k=>used.delete(k))}
+      if(cut)return}
+  })(0,S-(fs?1:0),TQ,total(fs?[base,fs.v]:[base]));
   return{set:bs,cut}}
 const fmt=(k,v)=>{if(BOOL.has(k))return'Yes';if(/Factor|Regen|Crit/.test(k)&&!/^Max|Block Points/.test(k)){const x=Math.round(v*1000)/10;return(x>0?'+':'')+x+'%'}return String(Math.round(v*100)/100)};
 const n2=(x,d=1)=>(Math.round(x*10**d)/10**d).toLocaleString('en',{maximumFractionDigits:d});
@@ -77,30 +91,43 @@ function run(){
       if(!L.length)sel.add(new Option('No lantern matches the filters',''));
       if(L.some(i=>i.n===keep))sel.value=keep}
     if(!auto){fi=C.find(c=>c.n===sel.value)||null;if(fi)C=C.filter(c=>c!==fi)}}
-  const pick=(pool,one)=>{let r={set:null};for(let S=5;S>0&&!r.set;S--)r=solve(pool.slice(),f,S,oc,one);return r};
+  const tOn=$('tit').checked,BASE=tOn?COLL:new Array(D).fill(0);let TP=[];
+  $('l-town').classList.toggle('hide',!tOn);
+  if(tOn){const own=$('town').checked;
+    const cand=TT.filter(t=>Object.keys(t.b).length&&(!own||TOWN.has(t.i))).map(t=>({T:1,i:t.i,n:t.n,k:'Title',r:TR[t.r]||1,rar:t.r,lock:!TOWN.has(t.i),v:tvec(TOWN.has(t.i)?t.b:tadd(t.b,t.cb))}));
+    /* a title that 3 or more others match or beat on every stat can never be needed */
+    TP=cand.filter((a,x)=>cand.filter((b,y)=>y!==x&&b.v.every((q,d)=>q>=a.v[d])&&(b.v.some((q,d)=>q>a.v[d])||y<x)).length<TSLOTS)}
+  const pick=(pool,one)=>{let r={set:null};for(let S=5;S>0&&!r.set;S--)r=solve(pool.concat(TP),f,S,oc,one,BASE,Math.min(TSLOTS,TP.length));return r};
   let res;
   if(auto&&L.length){
     res={set:null};let bs=-Infinity,cut=false;
     for(const l of L){const one=C.find(c=>c.n===l.n);if(!one)continue;
       const r=pick(C.filter(c=>c!==one),one);cut=cut||r.cut;
-      if(r.set){const sc=f(total(r.set.map(c=>c.v)));if(sc>bs+1e-12){bs=sc;res=r}}}
+      if(r.set){const sc=f(total([BASE,...r.set.map(c=>c.v)]));if(sc>bs+1e-12){bs=sc;res=r}}}
     res.cut=cut}
   else res=pick(C,fi);
   const out=$('out');
   if(!res.set){out.innerHTML='<div class="empty">No items match these filters.</div>';return}
-  const set=res.set.sort((a,b)=>a.c.localeCompare(b.c)||a.k.localeCompare(b.k));
-  const T=total(set.map(c=>c.v)),cur=DATA.cur.map(c=>vec(byName[c.n],c.t,c.rf)),TC=total(cur);
+  const set=res.set.filter(c=>!c.T).sort((a,b)=>a.c.localeCompare(b.c)||a.k.localeCompare(b.k)),tis=res.set.filter(c=>c.T).sort((a,b)=>a.n.localeCompare(b.n));
+  const cur=DATA.cur.map(c=>vec(byName[c.n],c.t,c.rf)),ctv=tOn?(DATA.curTitles||[]).map(i=>tById[i]).filter(Boolean).map(t=>tvec(t.b)):[];
+  const T=total([BASE,...set.map(c=>c.v),...tis.map(c=>c.v)]),TC=total([BASE,...cur,...ctv]);
   const M=metrics(T,p),MC=metrics(TC,p),g=GOALS[p.goal];
   const sc=f(T),scc=f(TC),dl=scc?(sc/scc-1)*100:0;
   const card=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">${c.k}</span><h3>${c.n}</h3>
   <div class="tags">${c.cl?`<span class="tag">${c.cl}</span>`:''}${c.ser?`<span class="tag set">${c.ser} set</span>`:''}${ownedSet.has(c.n)?'<span class="tag own">owned</span>':''}${c.fl?`<span class="tag">${c.fl}</span>`:''}</div>
   <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul></div>`;
+  const tcard=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">Title · ${c.rar}</span><h3>${esc(c.n)}</h3>
+  <div class="tags">${c.lock?'<span class="tag">locked · incl. its unlock bonus</span>':'<span class="tag own">unlocked</span>'}</div>
+  <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul></div>`;
+  const tsec=tOn?`<h2 class="sub">Titles <span class="hint">· ${TSLOTS} boost slots</span></h2>${tis.length?`<div class="slots">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}
+  <p class="hint" style="margin:-4px 0 16px">Also counted: the collection bonus of your ${TT.filter(t=>TOWN.has(t.i)&&Object.keys(t.cb).length).length} unlocked titles (always on, no slot needed).</p>`:'';
   const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
   const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return`<tr class="${key?'key':''}"><td>${l}</td><td class="num">${fm(a)}</td><td class="num">${fm(b)}</td><td class="num ${d>0.05?'up':d<-0.05?'dn':''}">${Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%'}</td></tr>`};
   const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||TC[d]).map(([k,d])=>`<tr><td>${k}</td><td class="num">${fmt(k,T[d])}</td><td class="num">${fmt(k,TC[d])}</td><td class="num ${T[d]>TC[d]?'up':T[d]<TC[d]?'dn':''}">${T[d]===TC[d]?'':fmt(k,T[d]-TC[d])}</td></tr>`).join('');
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><span class="score num">${g[1](sc)}</span></div>
   ${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots">${set.map(card).join('')}</div>
+  ${tsec}
   <div class="tw"><table><thead><tr><th>Result</th><th>Suggested</th><th>Equipped now</th><th>Change</th></tr></thead><tbody>
   ${dm.map(([k,l])=>row(l,M[k],MC[k],GOALS[k][1],k===p.goal)).join('')}
   ${p.goal==='custom'?row('Custom score',sc,scc,v=>n2(v,2),true):''}</tbody></table></div>

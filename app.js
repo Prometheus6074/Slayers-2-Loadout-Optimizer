@@ -184,15 +184,42 @@ const rerun=()=>{view==='opt'?ownAgain():dirty=true};
 const ENT=[...DATA.items.map(it=>({T:0,it,key:it.n,cat:it.c})),...TT.map(t=>({T:1,it:t,key:'t:'+t.i,cat:'Titles'}))];
 const isOwn=e=>e.T?TOWN.has(e.it.i):ownedSet.has(e.it.n);
 const CATS=[...new Set(ENT.map(e=>e.cat))];
-let curCat=CATS[0];/* My items shows one category at a time; searching or filtering shows matches from all of them */
+let curCat=CATS[0],sel=-1,dT=3,dR=0;/* sel = item shown in the detail window; dT / dR = tier and refine shown there *//* My items shows one category at a time; searching or filtering shows matches from all of them */
 const bf=o=>Object.keys(o).map(k=>k+' '+fmt(k,o[k])).join(', ');
 const rowHtml=i=>{const e=ENT[i],it=e.it,r=e.T?(TR[it.r]||1):it.r;
-  return`<div class="row r${r}" data-i="${i}" style="--rc:${RC[r]||RC[1]}"><label class="own"><input type="checkbox" data-p="${i}"><span class="pic">${e.T?`<b>${esc(it.n[0]||'')}</b>`:ico(it)}</span><span class="nm">${esc(it.n)}</span></label><label class="ex"><input type="checkbox" data-x="${i}">Exclude</label></div>`};
+  return`<button type="button" class="row r${r}" data-i="${i}" style="--rc:${RC[r]||RC[1]}" aria-pressed="false"><span class="pic">${e.T?`<b>${esc(it.n[0]||'')}</b>`:ico(it)}</span><span class="nm">${esc(it.n)}</span></button>`};
 $('items-cats').innerHTML=CATS.map(c=>{const ix=ENT.map((_,i)=>i).filter(i=>ENT[i].cat===c);
   return`<section class="cat" data-c="${esc(c)}"><div class="cat-head"><h2>${esc(c)}<span class="num" data-cc></span></h2><div class="cat-btns"><button type="button" class="btn" data-a="on">Tick shown</button><button type="button" class="btn" data-a="off">Untick shown</button></div></div><div class="cat-grid">${ix.map(rowHtml).join('')}</div></section>`}).join('');
 $('pg-chips').innerHTML='<button type="button" class="btn hide" id="pg-exchip" aria-pressed="false" data-exchip>Unincluded <span class="num" id="pg-exnum"></span></button>'+CATS.map(c=>`<button type="button" class="btn" data-chip="${esc(c)}">${esc(c)} <span class="num"></span></button>`).join('');
 const pgRows=[];document.querySelectorAll('#items-cats .row').forEach(l=>{pgRows[+l.dataset.i]=l});
 const pgSecs=[...document.querySelectorAll('#items-cats .cat')];
+/* detail window: shown only while an item is selected, laid out like the game's item tooltip */
+const gfmt=(k,v)=>{if(BOOL.has(k))return'Yes';if(/Factor|Regen/.test(k))return(Math.round((1+v)*10000)/10000)+'x';
+  if(k==='Crit Chance'||k==='Crit Resistance'){const x=Math.round(v*1000)/10;return(x>0?'+':'')+x+'%'}const x=Math.round(v*100)/100;return(x>0?'+':'')+x};
+const stRow=(k,v)=>`<li><span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span><b>${gfmt(k,v)}</b> <i>(${esc(k)})</i></li>`;
+const stList=o=>{const ks=Object.keys(o).filter(k=>o[k]);return ks.length?`<ul class="d-st">${ks.map(k=>stRow(k,o[k])).join('')}</ul>`:'<p class="hint">No stats.</p>'};
+const opts=(a,v)=>a.map(x=>`<option value="${x[0]}"${x[0]===v?' selected':''}>${x[1]}</option>`).join('');
+function selectItem(i){sel=i===sel?-1:i;if(sel>=0){dT=+$('tier').value||3;dR=+$('refine').value||0}renderDetail()}
+function syncDetail(){if(sel<0)return;const e=ENT[sel],b=$('i-detail'),p=b.querySelector('[data-dp]'),x=b.querySelector('[data-dx]');if(p)p.checked=isOwn(e);if(x)x.checked=exSet.has(e.key)}
+function renderDetail(){
+  const box=$('i-detail');
+  pgRows.forEach((r,i)=>{if(r){r.classList.toggle('sel',i===sel);r.setAttribute('aria-pressed',i===sel)}});
+  $('i-body').classList.toggle('has-sel',sel>=0);box.classList.toggle('hide',sel<0);
+  if(sel<0){box.innerHTML='';return}
+  const e=ENT[sel],it=e.it,r=e.T?(TR[it.r]||1):it.r,rw=e.T?it.r:(RN[it.r]||'');let body;
+  if(e.T)body=`<dl class="d-meta"><dt>Type</dt><dd>${esc(it.c)}</dd></dl><h4>Stats (when equipped)</h4>${stList(it.b)}<h4>Collection bonus</h4>${stList(it.cb)}`;
+  else{const P=DATA.pass||{},pa=it.ser&&P.items?[P.items[it.ser],['Top','Bottom'].includes(it.k)?P.outfit[it.ser]:null].filter(Boolean):[];
+    const rows=[it.g?['Tier',`<div class="rad" role="radiogroup" aria-label="Tier">${[1,2,3].map(x=>`<label><input type="radio" name="dt" value="${x}" data-dt${x===dT?' checked':''}>Tier ${x}</label>`).join('')}</div>`]:null,
+      it.rf?['Refine',`<select data-dr aria-label="Refine level">${opts(Array.from({length:11},(_,x)=>[x,'+'+x]),dR)}</select>`]:null,
+      it.cl?['Class',esc(it.cl)]:null,['Slot',esc(it.k)],it.ser?['Set',esc(it.ser)]:null,it.fl?['Availability',esc(it.fl)]:null,it.pr?['Cost',esc(Object.keys(it.pr).map(k=>k+' ×'+it.pr[k]).join(', '))]:null].filter(Boolean);
+    body=`<dl class="d-meta">${rows.map(x=>`<dt>${x[0]}</dt><dd>${x[1]}</dd>`).join('')}</dl>
+    ${pa.map(x=>`<div class="d-pas${dT<P.tier?' off':''}"><h4>Tier ${P.tier} Passive: ${esc(x.n)}${dT<P.tier?' <span class="hint">(inactive at tier '+dT+')</span>':''}</h4><p class="d-desc">${esc(x.d)}</p></div>`).join('')}
+    <h4>Stats</h4>${(()=>{const v=vec(it,dT,dR),o={};ST.forEach((k,d)=>{if(v[d])o[k]=v[d]});return stList(o)})()}`}
+  box.innerHTML=`<div class="d-head"><h3>${esc(it.n)}</h3><button type="button" class="btn" data-close>Close</button></div>
+  <div class="d-rar" style="--rc:${RC[r]||RC[1]}">${esc(rw)}</div>
+  <div class="d-sw"><label><input type="checkbox" data-dp>Owned</label><label><input type="checkbox" data-dx>Exclude from the calculation</label></div>
+  ${it.d?`<p class="d-desc">${esc(it.d)}</p>`:''}${body}`;
+  syncDetail()}
 /* tile order: owned, then not owned, then excluded; inside each, rarest first, then A to Z */
 function pgSort(){
   const fa=document.activeElement,key=i=>{const e=ENT[i];return[exSet.has(e.key)?2:isOwn(e)?0:1,-(e.T?RO[e.it.r]||1:e.it.r||1),e.it.n]};
@@ -200,23 +227,23 @@ function pgSort(){
     const rows=[...g.children].map(el=>({el,k:key(+el.dataset.i)}));
     const sorted=rows.slice().sort((a,b)=>a.k[0]-b.k[0]||a.k[1]-b.k[1]||a.k[2].localeCompare(b.k[2],'en'));
     if(sorted.some((r,x)=>r!==rows[x]))sorted.forEach(r=>g.appendChild(r.el))});
-  if(fa&&fa.matches&&fa.matches('input[data-p],input[data-x]'))fa.focus({preventScroll:true})}
+  if(fa&&fa.matches&&fa.matches('#items-cats .row'))fa.focus({preventScroll:true})}
 function syncOwn(){
   const io=DATA.items.filter(i=>ownedSet.has(i.n)).length,to=TT.filter(t=>TOWN.has(t.i)).length;
   $('pg-total').textContent=io+' of '+DATA.items.length+' items owned · '+to+' of '+TT.length+' titles unlocked';
-  pgRows.forEach((r,i)=>{const o=isOwn(ENT[i]);r.querySelector('[data-p]').checked=o;r.classList.toggle('on',o)});
+  pgRows.forEach((r,i)=>{const o=isOwn(ENT[i]);r.classList.toggle('on',o)});
   pgSecs.forEach(sec=>{const ix=[...sec.querySelectorAll('.row')].map(l=>+l.dataset.i),o=ix.filter(i=>isOwn(ENT[i])).length;
     sec.querySelector('[data-cc]').textContent=o+' of '+ix.length+(sec.dataset.c==='Titles'?' unlocked':' owned');
-    document.querySelector(`#pg-chips [data-chip="${sec.dataset.c}"] .num`).textContent=o+'/'+ix.length});pgSort()}
+    document.querySelector(`#pg-chips [data-chip="${sec.dataset.c}"] .num`).textContent=o+'/'+ix.length});pgSort();syncDetail()}
 function syncEx(){
   const n=exSet.size;
   if(!n)exOnly=false;
-  pgRows.forEach((r,i)=>{const x=exSet.has(ENT[i].key);r.querySelector('[data-x]').checked=x;r.classList.toggle('ex-on',x)});
+  pgRows.forEach((r,i)=>{const x=exSet.has(ENT[i].key);r.classList.toggle('ex-on',x)});
   $('nav-badge').textContent=n;$('nav-badge').classList.toggle('hide',!n);
   $('nav-items').setAttribute('aria-label',n?'My items, '+n+' left out of the calculation':'My items');
   $('pg-exnum').textContent=n;$('pg-exchip').classList.toggle('hide',!n);
   $('pg-exchip').classList.toggle('active',exOnly);$('pg-exchip').setAttribute('aria-pressed',exOnly);
-  $('pg-exclear').classList.toggle('hide',!n);pgSort()}
+  $('pg-exclear').classList.toggle('hide',!n);pgSort();syncDetail()}
 function pgFilter(){
   const w=$('pg-q').value.trim().toLowerCase().split(/\s+/),f=$('pg-f').value;
   ENT.forEach((e,i)=>{const it=e.it,o=isOwn(e),
@@ -235,7 +262,12 @@ function resetOwn(){ownedSet=new Set(DATA.owned);TOWN=new Set(DATA.titlesOwned||
 const shownIx=(rows,root)=>rows.map((r,i)=>i).filter(i=>rows[i]&&!rows[i].classList.contains('hide')&&!rows[i].closest('.cat').classList.contains('hide')&&(!root||root.contains(rows[i])));
 /* events */
 $('items-page').addEventListener('input',e=>e.stopPropagation());
-$('items-cats').addEventListener('change',e=>{const d=e.target.dataset;if(d.p!=null)setMany([+d.p],e.target.checked);else if(d.x!=null)setEx([+d.x],e.target.checked)});
+$('items-cats').addEventListener('click',e=>{const t=e.target.closest('.row');if(t)selectItem(+t.dataset.i)});
+$('i-detail').addEventListener('change',e=>{const t=e.target;if(sel<0)return;
+  if(t.matches('[data-dp]'))setMany([sel],t.checked);else if(t.matches('[data-dx]'))setEx([sel],t.checked);
+  else if(t.matches('[data-dt]')){dT=+t.value;renderDetail();const c=$('i-detail').querySelector('[data-dt]:checked');if(c)c.focus()}else if(t.matches('[data-dr]')){dR=+t.value;renderDetail()}});
+$('i-detail').addEventListener('click',e=>{if(e.target.closest('[data-close]'))selectItem(-1)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&sel>=0&&view==='items')selectItem(-1)});
 $('items-cats').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)setMany(shownIx(pgRows,b.closest('.cat')),b.dataset.a==='on')});
 $('pg-chips').addEventListener('click',e=>{if(e.target.closest('[data-exchip]')){exOnly=!exOnly;syncEx();pgFilter();return}
   const b=e.target.closest('[data-chip]');if(!b)return;

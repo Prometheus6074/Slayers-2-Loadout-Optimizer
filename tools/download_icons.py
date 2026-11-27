@@ -25,7 +25,11 @@ def get(url, binary=False):
 
 def main():
     with open("data.js", encoding="utf-8") as f:
-        ids = sorted(set(re.findall(r'"ic":"(\d+)"', f.read())))
+        text = f.read()
+    data = json.loads(text.split("const DATA=", 1)[1].rstrip().rstrip(";"))
+    ids = sorted({i["ic"] for i in data["items"] if i.get("ic")} | set(data.get("si", {}).values()))
+    if False:
+        pass
     os.makedirs("icons", exist_ok=True)
     todo = [i for i in ids if not os.path.exists(f"icons/{i}.png")]
     print(f"{len(ids)} icons in data.js, {len(todo)} to download")

@@ -103,9 +103,6 @@ tr.key td{background:var(--soft);font-weight:600}
  background:linear-gradient(165deg,color-mix(in srgb,var(--rc) 20%,var(--panel)),var(--panel) 75%);opacity:.62;transition:opacity .15s,box-shadow .15s,border-color .15s}
 .cat-grid .row:hover{opacity:.9}
 .cat-grid .row.on{opacity:1;border-color:var(--rc);box-shadow:0 8px 20px -10px var(--rc)}
-.cat-grid .row:has(.own input:focus-visible){outline:2px solid var(--acc);outline-offset:2px}
-.cat-grid .row>label.own{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;padding:16px 10px 10px;text-align:center;cursor:pointer;color:var(--ink);font-size:14px}
-.cat-grid .own input{position:absolute;top:10px;right:10px}
 .cat-grid .pic{width:76px;height:76px;display:grid;place-items:center;margin-bottom:4px;border-radius:10px;background:color-mix(in srgb,var(--rc) 14%,var(--soft))}
 .cat-grid .pic .ic{width:100%;height:100%;margin:0;object-fit:contain}
 .cat-grid .row:not(.on) .pic .ic{filter:grayscale(.85)}
@@ -113,9 +110,32 @@ tr.key td{background:var(--soft);font-weight:600}
 .cat-grid .nm{font-weight:600;line-height:1.25;overflow-wrap:anywhere}
 .cat-grid .rar{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--mute)}
 .cat-grid .k{font-size:11px;color:var(--mute)}
-.cat-grid .st-on{display:none!important;position:absolute;top:8px;left:8px;font-size:11px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--panel);border:1px solid var(--rc);color:var(--ink)}
-.cat-grid .row.on .st-on{display:block}
-.cat-grid .row>label.ex{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px;border-top:1px solid color-mix(in srgb,var(--rc) 25%,var(--line));font-size:12px;color:var(--mute);cursor:pointer}
 .cat-grid .row.ex-on .nm{text-decoration:line-through;opacity:.6}
-.cat-grid .row.ex-on>label.ex{color:var(--gold);font-weight:600}
 .cat{padding:18px}
+
+.cat-grid .row{align-items:center;gap:6px;padding:16px 10px 14px;text-align:center;cursor:pointer;font:inherit;font-size:14px;color:var(--ink)}
+.cat-grid .row:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.cat-grid .row.sel{outline:2px solid var(--ink);outline-offset:2px;opacity:1}
+.cat-grid .row.ex-on{opacity:.45;box-shadow:none}
+/* detail window */
+#i-body{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+#i-body.has-sel{grid-template-columns:minmax(0,1fr) 340px}
+.detail{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;display:grid;gap:10px;align-content:start;padding:18px}
+.d-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.d-head h3{font:700 24px/1.15 "IBM Plex Sans",system-ui,sans-serif}
+.d-rar{padding:3px 10px;border-radius:4px;font-weight:600;color:color-mix(in srgb,var(--rc) 55%,var(--ink));background:linear-gradient(90deg,color-mix(in srgb,var(--rc) 38%,transparent),transparent 85%)}
+.d-desc{margin:0;font-size:14px}
+.d-meta{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;margin:0;font-size:14px;align-items:center}
+.d-meta dt{color:var(--mute)}.d-meta dd{margin:0}.d-meta select{width:auto}
+.detail h4{font:700 15px "IBM Plex Sans",system-ui,sans-serif;margin:6px 0 0}
+.d-st{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.d-st li{display:flex;align-items:center;gap:8px}.d-st i{color:var(--mute)}
+.si{display:inline-grid;width:24px;height:24px;flex:none}.si img{width:100%;height:100%;object-fit:contain}
+.d-sw{display:grid;gap:10px;padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.d-sw label{display:flex;align-items:center;gap:10px;color:var(--ink);font-size:14px}
+@media(max-width:860px){#i-body.has-sel{grid-template-columns:1fr}.detail{position:fixed;left:8px;right:8px;bottom:8px;top:auto;max-height:62vh;z-index:5;box-shadow:0 10px 40px rgba(0,0,0,.45)}}
+input[type=radio]{-webkit-appearance:none;appearance:none;flex:none;width:18px;height:18px;margin:0;border-radius:50%;border:2px solid var(--mute);cursor:pointer;background:transparent;transition:border-color .15s,background-color .15s}
+input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(circle,var(--acc) 0 4.5px,transparent 5px)}
+.rad{display:flex;flex-wrap:wrap;gap:6px 16px}.rad label{display:flex;align-items:center;gap:6px;color:var(--ink);font-size:14px;cursor:pointer}
+.d-pas{display:grid;gap:4px}.d-pas.off{opacity:.55}
+@media(prefers-reduced-motion:reduce){input[type=radio]{transition:none}}

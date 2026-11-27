@@ -93,10 +93,10 @@ function run(){
   const p=params(),f=scorer(p),tier=+$('tier').value,rl=+$('refine').value;
   for(const[id,sh]of[['f-dmg',['exp','hit','crit']],['f-hp',['hp','def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal));
   $('f-rng').classList.toggle('hide',p.goal!=='def');
-  let items=DATA.items;
-  if($('owned').checked)items=items.filter(i=>ownedSet.has(i.n));
-  if($('noevt').checked)items=items.filter(i=>i.fl!=='unobtainable');
-  if(exSet.size)items=items.filter(i=>!exSet.has(i.n));
+  let base0=DATA.items;
+  if($('noevt').checked)base0=base0.filter(i=>i.fl!=='unobtainable');
+  if(exSet.size)base0=base0.filter(i=>!exSet.has(i.n));
+  const items=$('owned').checked?base0.filter(i=>ownedSet.has(i.n)):base0;
   let C=items.map(i=>({...i,v:vec(i,tier,rl)})),fi=null,L=[];
   const on=$('lant').checked,auto=on&&$('lcalc').checked,sel=$('lantern'),oc=$('onecat').checked;
   $('l-calc').classList.toggle('hide',!on);$('l-lant').classList.toggle('hide',!on||auto);
@@ -132,15 +132,29 @@ function run(){
   const T=total([BASE,...set.map(c=>c.v),...tis.map(c=>c.v)]),TC=total([BASE,...cur,...ctv]);
   const M=metrics(T,p),MC=metrics(TC,p),g=GOALS[p.goal];
   const sc=f(T),scc=f(TC);
+  /* what each piece adds: the score with it vs. the same set without it */
+  const gainOf=new Map();
+  res.set.forEach(c=>{const o=f(total([BASE,...res.set.filter(x=>x!==c).map(x=>x.v)]));gainOf.set(c,o>0?sc/o-1:null)});
+  const gn=c=>{const g=gainOf.get(c);return g==null?'':`<p class="hint">Adds ${g>=0?'+':''}${n2(g*100,1)}% to the score</p>`};
+  /* upgrade finder: pieces of the best set you don't own yet (if \"Only items I own\" is on, search again with every item) */
+  let ups=[],upNote='';
+  if(!auto){
+    let usrc=res.set,full=sc;
+    if($('owned').checked){const C2=base0.map(i=>({...i,v:vec(i,tier,rl)})).filter(c=>!fi||c.n!==fi.n),r2=pick(C2,fi);
+      if(r2.set){usrc=r2.set;full=f(total([BASE,...usrc.map(c=>c.v)]))}}
+    ups=usrc.filter(c=>!c.T&&!ownedSet.has(c.n)).map(c=>{const o=f(total([BASE,...usrc.filter(x=>x!==c).map(x=>x.v)]));return{...c,g:o>0?full/o-1:null}}).sort((a,b)=>(b.g||0)-(a.g||0));
+    upNote=$('owned').checked?`Your best owned set scores ${g[1](sc)}. With these items the best possible set scores ${g[1](full)} (${full>=sc?'+':''}${n2((sc?full/sc-1:0)*100,1)}%).`:'These pieces of the best set are not in your owned items yet.'}
+  const pr=o=>o?Object.keys(o).map(k=>k+' ×'+o[k]).join(', '):'';
+  const upsec=ups.length?`<h2 class="sub">Upgrades to get</h2><p class="hint">${upNote}</p><div class="slots">${ups.map(u=>`<div class="slot" style="--rc:${RC[u.r]||RC[1]}"><span class="k">${u.k}</span><h3>${esc(u.n)}</h3><div class="tags">${u.cl?`<span class="tag">${u.cl}</span>`:''}${u.ser?`<span class="tag set">${u.ser} set</span>`:''}${u.fl?`<span class="tag">${u.fl}</span>`:''}</div>${u.g==null?'':`<p class="hint">Adds ${u.g>=0?'+':''}${n2(u.g*100,1)}% to the best set</p>`}<p class="hint">${u.pr?'Cost: '+esc(pr(u.pr)):'Cost not in the save'}</p></div>`).join('')}</div>`:'';
   const qx=k=>`<label class="qx"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
   if(lastEx&&!exSet.has(lastEx.k))lastEx=null;
   const exNote=lastEx?`<p class="hint exnote">Excluded <b>${esc(lastEx.name)}</b> from the calculation. <button type="button" class="btn" data-undo>Undo</button></p>`:'';
   const card=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">${c.k}</span><h3>${c.n}</h3>
   <div class="tags">${c.cl?`<span class="tag">${c.cl}</span>`:''}${c.ser?`<span class="tag set">${c.ser} set</span>`:''}${ownedSet.has(c.n)?'<span class="tag own">owned</span>':''}${c.fl?`<span class="tag">${c.fl}</span>`:''}</div>
-  <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx(c.n)}</div>`;
+  ${gn(c)}<ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx(c.n)}</div>`;
   const tcard=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">Title · ${c.rar}</span><h3>${esc(c.n)}</h3>
   <div class="tags">${c.lock?'<span class="tag">locked</span>':'<span class="tag own">unlocked</span>'}</div>
-  <ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx('t:'+c.i)}</div>`;
+  ${gn(c)}<ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx('t:'+c.i)}</div>`;
   const tsec=tOn?`<h2 class="sub">Titles</h2>${tis.length?`<div class="slots">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}`:'';
   const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
   const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return`<tr class="${key?'key':''}"><td>${l}</td><td class="num">${fm(a)}</td><td class="num">${emp?'—':fm(b)}</td><td class="num ${emp?'':d>0.05?'up':d<-0.05?'dn':''}">${emp?'':Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%'}</td></tr>`};
@@ -150,6 +164,7 @@ function run(){
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots">${set.map(card).join('')}</div>
   ${tsec}
+  ${upsec}
   <div class="tw"><table><thead><tr><th>Result</th><th>Suggested</th><th>${eqh}</th><th>Change</th></tr></thead><tbody>
   ${dm.map(([k,l])=>row(l,M[k],MC[k],GOALS[k][1],k===p.goal)).join('')}
   ${p.goal==='custom'?row('Custom score',sc,scc,v=>n2(v,2),true):''}</tbody></table></div>

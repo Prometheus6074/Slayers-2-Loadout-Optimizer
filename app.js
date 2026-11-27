@@ -126,7 +126,7 @@ function run(){
     res.cut=cut}
   else res=pick(C,fi);
   const out=$('out');
-  if(!res.set){out.innerHTML='<div class="empty">No items match these filters.</div>';syncLoBar();return}
+  if(!res.set){out.innerHTML='<div class="empty">No items match these filters.</div>';$('o-res').innerHTML='';$('o-body').classList.remove('has-res');syncLoBar();return}
   const set=res.set.filter(c=>!c.T).sort((a,b)=>a.c.localeCompare(b.c)||a.k.localeCompare(b.k)),tis=res.set.filter(c=>c.T).sort((a,b)=>a.n.localeCompare(b.n));
   last={set:set.slice(),tis:tis.slice(),tier,rl};
   const lo=LO.list[LO.sel],cur=lo.items.map(c=>vec(byName[c.n],c.t,c.rf)),
@@ -138,7 +138,10 @@ function run(){
   const gainOf=new Map();
   res.set.forEach(c=>{const o=f(total([BASE,...res.set.filter(x=>x!==c).map(x=>x.v)]));gainOf.set(c,o>0?sc/o-1:null)});
   const gn=c=>{const g=gainOf.get(c);return g==null?'':`<span class="gain" title="How much this piece adds to the score">${g>=0?'+':''}${n2(g*100,1)}% score</span>`};
-  const otile=(c,key,on,gain,pic)=>`<button type="button" class="row r${c.r}${on?' on':''}${pic===null?' tt':''}" data-o="${EI[key]}" style="--rc:${RC[c.r]||RC[1]}" aria-pressed="false">${pic===null?'':`<span class="pic">${pic}</span>`}<span class="nm">${esc(c.n)}</span>${gain}</button>`;
+  /* each card carries its own stats (stats are read at the tier and refine chosen on the left) */
+  const cst=c=>{if(c.T){const t=tById[c.i];return stList(t.b)+(Object.keys(t.cb).some(k=>t.cb[k])?`<h4 class="c-lbl">Collection bonus</h4>${stList(t.cb)}`:'')}
+    const o={};ST.forEach((k,d)=>{if(c.v[d])o[k]=c.v[d]});return stList(o)};
+  const otile=(c,key,on,gain,pic)=>`<div class="row r${c.r}${on?' on':''}${pic===null?' tt':''}" style="--rc:${RC[c.r]||RC[1]}">${pic===null?'':`<span class="pic">${pic}</span>`}<span class="nm">${esc(c.n)}</span>${gain}${cst(c)}</div>`;
   /* upgrade finder: pieces of the best set you don't own yet (if \"Only items I own\" is on, search again with every item) */
   let ups=[],upNote='';
   if(!auto){
@@ -156,18 +159,19 @@ function run(){
   const tcard=c=>otile(c,'t:'+c.i,!c.lock,gn(c),null);
   const tsec=tOn?`<h2 class="sub">Titles</h2>${tis.length?`<div class="slots cat-grid">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}`:'';
   const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
-  const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return`<tr class="${key?'key':''}"><td>${l}</td><td class="num">${fm(a)}</td><td class="num">${emp?'—':fm(b)}</td><td class="num ${emp?'':d>0.05?'up':d<-0.05?'dn':''}">${emp?'':Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%'}</td></tr>`};
-  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||(!emp&&TC[d])).map(([k,d])=>`<tr><td>${k}</td><td class="num">${fmt(k,T[d])}</td><td class="num">${emp?'—':fmt(k,TC[d])}</td><td class="num ${emp?'':T[d]>TC[d]?'up':T[d]<TC[d]?'dn':''}">${emp||T[d]===TC[d]?'':fmt(k,T[d]-TC[d])}</td></tr>`).join('');
-  const eqh=`Equipped · ${esc(loName(LO.sel))}`;
-  out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><span class="score num">${g[1](sc)}</span></div>
+  const dl=(t,c)=>`<em class="num ${c}">(${t})</em>`;
+  const li=(l,v,d,key,ic)=>`<li class="${key?'key':''}"><span class="rn">${ic||''}${l}</span><span class="rv"><b class="num">${v}</b>${d}</span></li>`;
+  const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return li(l,fm(a),emp?'':dl(Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%',d>0.05?'up':d<-0.05?'dn':''),key)};
+  const sd=(k,v)=>{const s=fmt(k,v);return BOOL.has(k)||/^[+-]/.test(s)?s:'+'+s};
+  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||(!emp&&TC[d])).map(([k,d])=>li(esc(k),fmt(k,T[d]),emp||T[d]===TC[d]?'':dl(sd(k,T[d]-TC[d]),T[d]>TC[d]?'up':'dn'),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`)).join('');
+  out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2></div>
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots cat-grid">${set.map(card).join('')}</div>
   ${tsec}
-  ${upsec}
-  <div class="tw"><table><thead><tr><th>Result</th><th>Suggested</th><th>${eqh}</th><th>Change</th></tr></thead><tbody>
-  ${dm.map(([k,l])=>row(l,M[k],MC[k],GOALS[k][1],k===p.goal)).join('')}
-  ${p.goal==='custom'?row('Custom score',sc,scc,v=>n2(v,2),true):''}</tbody></table></div>
-  <div class="tw" style="margin-top:12px"><table><thead><tr><th>Stat totals</th><th>Suggested</th><th>${eqh}</th><th>Change</th></tr></thead><tbody>${sr}</tbody></table></div>`;markSel();syncLoBar()}
+  ${upsec}`;
+  $('o-res').innerHTML=`<h2 class="sub">Results</h2><ul class="rs">${dm.map(([k,l])=>row(l,M[k],MC[k],GOALS[k][1],k===p.goal)).join('')}${p.goal==='custom'?row('Custom score',sc,scc,v=>n2(v,2),true):''}</ul>
+  <h2 class="sub">Stat totals</h2><ul class="rs">${sr}</ul>`;
+  $('o-body').classList.add('has-res');syncLoBar()}
 let tm;document.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(run,120)});
 
 const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
@@ -182,7 +186,7 @@ const ENT=[...DATA.items.map(it=>({T:0,it,key:it.n,cat:it.c})),...TT.map(t=>({T:
 const EI=Object.fromEntries(ENT.map((e,i)=>[e.key,i]));/* entry index by item name or 't:'+title id */
 const isOwn=e=>e.T?TOWN.has(e.it.i):ownedSet.has(e.it.n);
 const CATS=[...new Set(ENT.map(e=>e.cat))];
-let curCat=CATS[0],sel=-1,selO=-1,dT=3,dR=0;/* sel / selO = item open in the detail window on My items / on the optimizer *//* sel = item shown in the detail window; dT / dR = tier and refine shown there *//* My items shows one category at a time; searching or filtering shows matches from all of them */
+let curCat=CATS[0],sel=-1,dT=3,dR=0;/* sel = item shown in the detail window; dT / dR = tier and refine shown there *//* My items shows one category at a time; searching or filtering shows matches from all of them */
 const bf=o=>Object.keys(o).map(k=>k+' '+fmt(k,o[k])).join(', ');
 const rowHtml=i=>{const e=ENT[i],it=e.it,r=e.T?(TR[it.r]||1):it.r;
   return`<button type="button" class="row r${r}${e.T?' tt':''}" data-i="${i}" style="--rc:${RC[r]||RC[1]}" aria-pressed="false">${e.T?'':`<span class="pic">${ico(it)}</span>`}<span class="nm">${esc(it.n)}</span></button>`};
@@ -198,14 +202,12 @@ const stRow=(k,v)=>`<li><span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/
 const stList=o=>{const ks=Object.keys(o).filter(k=>o[k]);return ks.length?`<ul class="d-st">${ks.map(k=>stRow(k,o[k])).join('')}</ul>`:'<p class="hint">No stats.</p>'};
 const opts=(a,v)=>a.map(x=>`<option value="${x[0]}"${x[0]===v?' selected':''}>${x[1]}</option>`).join('');
 function selectItem(i){sel=i===sel?-1:i;if(sel>=0){dT=+$('tier').value||3;dR=+$('refine').value||0}renderDetail()}
-const curSel=()=>view==='items'?sel:selO,curBox=()=>$(view==='items'?'i-detail':'o-detail');
-function selectO(i){selO=i===selO?-1:i;if(selO>=0){dT=+$('tier').value||3;dR=+$('refine').value||0}renderDetail()}
-function closeDetail(){if(view==='items')sel=-1;else selO=-1;renderDetail()}
-function markSel(){document.querySelectorAll('#out [data-o]').forEach(b=>{const on=+b.dataset.o===selO;b.classList.toggle('sel',on);b.setAttribute('aria-pressed',on)})}
+const curSel=()=>view==='items'?sel:-1,curBox=()=>$('i-detail');
+function closeDetail(){sel=-1;renderDetail()}
 function syncDetail(){const s=curSel();if(s<0)return;const e=ENT[s],b=curBox(),p=b.querySelector('[data-dp]'),x=b.querySelector('[data-dx]');if(p)p.checked=isOwn(e);if(x)x.checked=exSet.has(e.key)}
 function renderDetail(){
   const isI=view==='items',s=curSel(),box=curBox();
-  if(isI)pgRows.forEach((r,i)=>{if(r){r.classList.toggle('sel',i===sel);r.setAttribute('aria-pressed',i===sel)}});else markSel();
+  if(isI)pgRows.forEach((r,i)=>{if(r){r.classList.toggle('sel',i===sel);r.setAttribute('aria-pressed',i===sel)}});
   $(isI?'i-body':'o-body').classList.toggle('has-sel',s>=0);box.classList.toggle('hide',s<0);
   if(s<0){box.innerHTML='';return}
   const e=ENT[s],it=e.it,r=e.T?(TR[it.r]||1):it.r,rw=e.T?it.r:(RN[it.r]||'');let body;
@@ -265,12 +267,11 @@ const shownIx=(rows,root)=>rows.map((r,i)=>i).filter(i=>rows[i]&&!rows[i].classL
 /* events */
 $('items-page').addEventListener('input',e=>e.stopPropagation());
 $('items-cats').addEventListener('click',e=>{const t=e.target.closest('.row');if(t)selectItem(+t.dataset.i)});
-for(const id of['i-detail','o-detail']){const bx=$(id);
+for(const id of['i-detail']){const bx=$(id);
   bx.addEventListener('change',e=>{const t=e.target,s=curSel();if(s<0)return;
     if(t.matches('[data-dp]'))setMany([s],t.checked);else if(t.matches('[data-dx]'))setEx([s],t.checked);
     else if(t.matches('[data-dt]')){dT=+t.value;renderDetail();const c=bx.querySelector('[data-dt]:checked');if(c)c.focus()}else if(t.matches('[data-dr]')){dR=+t.value;renderDetail()}});
   bx.addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeDetail()})}
-$('out').addEventListener('click',e=>{const t=e.target.closest('[data-o]');if(t)selectO(+t.dataset.o)});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&curSel()>=0)closeDetail()});
 $('items-cats').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)setMany(shownIx(pgRows,b.closest('.cat')),b.dataset.a==='on')});
 $('pg-chips').addEventListener('click',e=>{if(e.target.closest('[data-exchip]')){exOnly=!exOnly;syncEx();pgFilter();return}

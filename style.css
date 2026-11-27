@@ -31,7 +31,6 @@ fieldset{border:0;padding:0;margin:0;display:grid;gap:10px}
 .hint{font-size:12px;color:var(--mute);margin:0}
 .head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
 .head h2{font-size:22px}
-.score{font-family:"Shippori Mincho",serif;font-weight:800;font-size:24px;color:var(--gold)}
 .slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:16px}
 .slot{background:var(--panel);border:1px solid var(--line);border-top:5px solid var(--rc,var(--line));border-radius:4px 4px 10px 10px;padding:12px;display:grid;gap:6px;align-content:start}
 .slot .k{font-size:12px;color:var(--mute)}
@@ -142,10 +141,26 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 
 /* optimizer results use the same tiles and detail window */
 #o-body{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
-#o-body.has-sel{grid-template-columns:minmax(0,1fr) 340px}
-.slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));margin-bottom:16px}
+#o-body.has-res{grid-template-columns:minmax(0,1fr) 340px}
+.slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));margin-bottom:16px}
 .cat-grid .gain{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
-@media(max-width:1180px){#o-body.has-sel{grid-template-columns:1fr}#o-detail{position:fixed;left:8px;right:8px;bottom:8px;top:auto;max-height:62vh;z-index:5;box-shadow:0 10px 40px rgba(0,0,0,.45)}}
+@media(max-width:1180px){#o-body.has-res{grid-template-columns:1fr}#o-res{position:static;max-height:none}}
 /* titles have no picture: the name itself takes the rarity colour */
 .cat-grid .row.tt{justify-content:center;min-height:84px}
 .cat-grid .row.tt .nm{color:var(--rc);font-size:15px}
+/* optimizer cards show their own stats and are not clickable */
+.slots .row{cursor:default}
+.slots .d-st{width:100%;margin-top:4px;text-align:left;font-size:12px;gap:4px}
+.slots .d-st li{flex-wrap:wrap;gap:0 6px}
+.slots .si{width:18px;height:18px}
+.c-lbl{width:100%;margin:8px 0 0;text-align:left;font:700 12px "IBM Plex Sans",system-ui,sans-serif;color:var(--mute)}
+/* results window: stat name on the left, suggested value on the right with the change underneath */
+#o-body:not(.has-res) #o-res{display:none}
+.res{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;display:grid;gap:6px;align-content:start}
+.rs{list-style:none;margin:0 0 10px;padding:0}
+.rs li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 8px;border-bottom:1px solid var(--line)}
+.rs li.key{background:var(--soft)}
+.rn{display:flex;align-items:center;gap:8px}
+.rs .si{width:20px;height:20px}
+.rv{display:grid;justify-items:end;line-height:1.25}
+.rv em{font-style:normal;font-size:12px}

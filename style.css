@@ -17,7 +17,12 @@ header p{margin:6px 0 0;color:var(--mute);max-width:70ch}
 label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
 label.row{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:14px}
 select,input[type=number],input[type=search],input[type=text]{font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
-input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px}
+/* checkboxes drawn as switches; only the knob position and track colour animate */
+input[type=checkbox]{-webkit-appearance:none;appearance:none;flex:none;width:34px;height:20px;margin:0;border-radius:99px;cursor:pointer;
+ background-color:var(--line);background-image:radial-gradient(circle,var(--knob,var(--mute)) 0 6px,transparent 6.5px);background-repeat:no-repeat;background-size:14px 14px;background-position:3px 50%;
+ transition:background-color .15s,background-position .15s}
+input[type=checkbox]:checked{--knob:var(--accink);background-color:var(--acc);background-position:17px 50%}
+@media(prefers-reduced-motion:reduce){input[type=checkbox]{transition:none}}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 fieldset{border:0;padding:0;margin:0;display:grid;gap:10px}
@@ -70,17 +75,8 @@ tr.key td{background:var(--soft);font-weight:600}
 .cat-head h2{font-size:20px}
 .cat-head .num{color:var(--mute);font-size:14px;font-weight:400;font-family:"IBM Plex Sans",system-ui,sans-serif;margin-left:6px}
 .cat-btns{display:flex;gap:6px}
-.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 12px}
-.cat-grid .row{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 8px;border-radius:6px}
-.cat-grid .row:hover,.cat-grid .row.on{background:var(--soft)}
-.cat-grid .row>label.own{display:flex;align-items:center;flex:1;min-width:0;gap:8px;color:var(--ink);font-size:13px;cursor:pointer}
-.cat-grid .row>label.ex{display:flex;align-items:center;flex:none;gap:4px;color:var(--mute);font-size:12px;cursor:pointer}
-.cat-grid .row.ex-on .nm{text-decoration:line-through;opacity:.6}
-.cat-grid .row.ex-on>label.ex{color:var(--gold);font-weight:600}
 .chips .btn.active{background:var(--acc);border-color:var(--acc);color:var(--accink)}
 .chips .btn.active .num{color:inherit}
-.cat-grid .nm{flex:1;min-width:0}
-.cat-grid .k{font-size:11px;color:var(--mute);text-align:right}
 
 
 .lo{display:grid;gap:10px;margin-bottom:16px}
@@ -100,4 +96,26 @@ tr.key td{background:var(--soft);font-weight:600}
 .exnote{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
 
 .slot .ic{float:right;width:44px;height:44px;margin:0 0 6px 8px;object-fit:contain}
-.row .ic{width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:6px}
+
+/* My items: one tile per item, coloured by the game's rarity */
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px}
+.cat-grid .row{position:relative;display:flex;flex-direction:column;border:2px solid color-mix(in srgb,var(--rc) 45%,var(--line));border-radius:12px;overflow:hidden;
+ background:linear-gradient(165deg,color-mix(in srgb,var(--rc) 20%,var(--panel)),var(--panel) 75%);opacity:.62;transition:opacity .15s,box-shadow .15s,border-color .15s}
+.cat-grid .row:hover{opacity:.9}
+.cat-grid .row.on{opacity:1;border-color:var(--rc);box-shadow:0 8px 20px -10px var(--rc)}
+.cat-grid .row:has(.own input:focus-visible){outline:2px solid var(--acc);outline-offset:2px}
+.cat-grid .row>label.own{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;padding:16px 10px 10px;text-align:center;cursor:pointer;color:var(--ink);font-size:14px}
+.cat-grid .own input{position:absolute;top:10px;right:10px}
+.cat-grid .pic{width:76px;height:76px;display:grid;place-items:center;margin-bottom:4px;border-radius:10px;background:color-mix(in srgb,var(--rc) 14%,var(--soft))}
+.cat-grid .pic .ic{width:100%;height:100%;margin:0;object-fit:contain}
+.cat-grid .row:not(.on) .pic .ic{filter:grayscale(.85)}
+.cat-grid .pic b{font:800 30px/1 "Shippori Mincho",Georgia,serif;color:var(--ink);opacity:.7}
+.cat-grid .nm{font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+.cat-grid .rar{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--mute)}
+.cat-grid .k{font-size:11px;color:var(--mute)}
+.cat-grid .st-on{display:none!important;position:absolute;top:8px;left:8px;font-size:11px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--panel);border:1px solid var(--rc);color:var(--ink)}
+.cat-grid .row.on .st-on{display:block}
+.cat-grid .row>label.ex{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px;border-top:1px solid color-mix(in srgb,var(--rc) 25%,var(--line));font-size:12px;color:var(--mute);cursor:pointer}
+.cat-grid .row.ex-on .nm{text-decoration:line-through;opacity:.6}
+.cat-grid .row.ex-on>label.ex{color:var(--gold);font-weight:600}
+.cat{padding:18px}

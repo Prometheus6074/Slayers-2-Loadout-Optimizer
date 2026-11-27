@@ -2,7 +2,8 @@ const ST=DATA.stats,D=ST.length,I={};ST.forEach((k,i)=>I[k]=i);
 const BOOL=new Set(['Sun Immunity','Cold Immunity']),HI=ST.map(k=>k==='Illumination');
 const TM=[1,1.15,1.3],RM=[1,1.05,1.1,1.2,1.3,1.4,1.55,1.7,1.9,2,3];
 /* the game's own rarity colours (ReplicatedStorage > CAM > Global > Rarities > Colors); Impossible is black in game, so it follows the page text colour here */
-const RC=['#dfe6cc','#dfe6cc','#7fd677','#4fb9ff','#d94dd9','#ffca2c','#a10000','var(--ink)','#a68cff'],RN=['','Common','Uncommon','Rare','Epic','Legendary','Mythic','Impossible','Limited'];
+const RC=['#dfe6cc','#dfe6cc','#7fd677','#4fb9ff','#d94dd9','#ffca2c','#a10000','var(--ink)','#a68cff'],RN=['','Common','Uncommon','Rare','Epic','Legendary','Mythic','Impossible','Limited'],
+  RO={Common:1,UnCommon:2,Uncommon:2,Rare:3,Epic:4,Legendary:5,Mythic:6,Impossible:7,Limited:8,'Impossible Limited':9};/* rarity order, rarest last */
 const $=id=>document.getElementById(id);
 const byName=Object.fromEntries(DATA.items.map(i=>[i.n,i]));
 const OWN_KEY='ouwland-owned:'+DATA.owned.reduce((h,n)=>{for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))>>>0;return h},7);
@@ -185,21 +186,28 @@ const isOwn=e=>e.T?TOWN.has(e.it.i):ownedSet.has(e.it.n);
 const CATS=[...new Set(ENT.map(e=>e.cat))];
 let curCat=CATS[0];/* My items shows one category at a time; searching or filtering shows matches from all of them */
 const bf=o=>Object.keys(o).map(k=>k+' '+fmt(k,o[k])).join(', ');
-const rowHtml=i=>{const e=ENT[i],it=e.it,r=e.T?(TR[it.r]||1):it.r,rw=e.T?it.r:(RN[it.r]||''),
-  sub=e.T?it.c:[it.k!==it.c?it.k:'',it.cl,it.fl].filter(Boolean).join(' · ');
-  return`<div class="row r${r}" data-i="${i}" style="--rc:${RC[r]||RC[1]}"><label class="own"><input type="checkbox" data-p="${i}"><span class="pic">${e.T?`<b>${esc(it.n[0]||'')}</b>`:ico(it)}</span><span class="nm">${esc(it.n)}</span><span class="rar">${dot({r})}${esc(rw)}</span><span class="k">${esc(sub)}</span><span class="st-on">Owned</span></label><label class="ex"><input type="checkbox" data-x="${i}">Exclude</label></div>`};
+const rowHtml=i=>{const e=ENT[i],it=e.it,r=e.T?(TR[it.r]||1):it.r;
+  return`<div class="row r${r}" data-i="${i}" style="--rc:${RC[r]||RC[1]}"><label class="own"><input type="checkbox" data-p="${i}"><span class="pic">${e.T?`<b>${esc(it.n[0]||'')}</b>`:ico(it)}</span><span class="nm">${esc(it.n)}</span></label><label class="ex"><input type="checkbox" data-x="${i}">Exclude</label></div>`};
 $('items-cats').innerHTML=CATS.map(c=>{const ix=ENT.map((_,i)=>i).filter(i=>ENT[i].cat===c);
   return`<section class="cat" data-c="${esc(c)}"><div class="cat-head"><h2>${esc(c)}<span class="num" data-cc></span></h2><div class="cat-btns"><button type="button" class="btn" data-a="on">Tick shown</button><button type="button" class="btn" data-a="off">Untick shown</button></div></div><div class="cat-grid">${ix.map(rowHtml).join('')}</div></section>`}).join('');
 $('pg-chips').innerHTML='<button type="button" class="btn hide" id="pg-exchip" aria-pressed="false" data-exchip>Unincluded <span class="num" id="pg-exnum"></span></button>'+CATS.map(c=>`<button type="button" class="btn" data-chip="${esc(c)}">${esc(c)} <span class="num"></span></button>`).join('');
 const pgRows=[];document.querySelectorAll('#items-cats .row').forEach(l=>{pgRows[+l.dataset.i]=l});
 const pgSecs=[...document.querySelectorAll('#items-cats .cat')];
+/* tile order: owned, then not owned, then excluded; inside each, rarest first, then A to Z */
+function pgSort(){
+  const fa=document.activeElement,key=i=>{const e=ENT[i];return[exSet.has(e.key)?2:isOwn(e)?0:1,-(e.T?RO[e.it.r]||1:e.it.r||1),e.it.n]};
+  document.querySelectorAll('#items-cats .cat-grid').forEach(g=>{
+    const rows=[...g.children].map(el=>({el,k:key(+el.dataset.i)}));
+    const sorted=rows.slice().sort((a,b)=>a.k[0]-b.k[0]||a.k[1]-b.k[1]||a.k[2].localeCompare(b.k[2],'en'));
+    if(sorted.some((r,x)=>r!==rows[x]))sorted.forEach(r=>g.appendChild(r.el))});
+  if(fa&&fa.matches&&fa.matches('input[data-p],input[data-x]'))fa.focus({preventScroll:true})}
 function syncOwn(){
   const io=DATA.items.filter(i=>ownedSet.has(i.n)).length,to=TT.filter(t=>TOWN.has(t.i)).length;
   $('pg-total').textContent=io+' of '+DATA.items.length+' items owned · '+to+' of '+TT.length+' titles unlocked';
   pgRows.forEach((r,i)=>{const o=isOwn(ENT[i]);r.querySelector('[data-p]').checked=o;r.classList.toggle('on',o)});
   pgSecs.forEach(sec=>{const ix=[...sec.querySelectorAll('.row')].map(l=>+l.dataset.i),o=ix.filter(i=>isOwn(ENT[i])).length;
     sec.querySelector('[data-cc]').textContent=o+' of '+ix.length+(sec.dataset.c==='Titles'?' unlocked':' owned');
-    document.querySelector(`#pg-chips [data-chip="${sec.dataset.c}"] .num`).textContent=o+'/'+ix.length})}
+    document.querySelector(`#pg-chips [data-chip="${sec.dataset.c}"] .num`).textContent=o+'/'+ix.length});pgSort()}
 function syncEx(){
   const n=exSet.size;
   if(!n)exOnly=false;
@@ -208,7 +216,7 @@ function syncEx(){
   $('nav-items').setAttribute('aria-label',n?'My items, '+n+' left out of the calculation':'My items');
   $('pg-exnum').textContent=n;$('pg-exchip').classList.toggle('hide',!n);
   $('pg-exchip').classList.toggle('active',exOnly);$('pg-exchip').setAttribute('aria-pressed',exOnly);
-  $('pg-exclear').classList.toggle('hide',!n)}
+  $('pg-exclear').classList.toggle('hide',!n);pgSort()}
 function pgFilter(){
   const w=$('pg-q').value.trim().toLowerCase().split(/\s+/),f=$('pg-f').value;
   ENT.forEach((e,i)=>{const it=e.it,o=isOwn(e),

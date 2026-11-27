@@ -173,9 +173,8 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 .lo-add:hover{color:var(--ink);background:var(--soft)}
 .lo-add span{font-size:18px;line-height:1}
 /* Equip sits top right of the panel; Rename (and delete) show on hover / keyboard focus of a loadout row */
-.lo-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
-.lo-head h2{margin:0;white-space:nowrap}
-.lo-head .btn{min-width:0;max-width:64%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#out .head{align-items:center}
+#out .head .btn{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lo-opts{display:none;align-items:center;gap:2px;padding-right:6px}
 .lo-tab:hover .lo-opts,.lo-tab:focus-within .lo-opts{display:flex}
 @media(hover:none){.lo-tab.on .lo-opts{display:flex}}

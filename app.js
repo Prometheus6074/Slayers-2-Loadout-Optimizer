@@ -158,7 +158,7 @@ function run(){
   const li=(l,v,d,key,ic)=>`<li class="${key?'key':''}"><span class="rn">${ic||''}${l}</span><span class="rv"><b class="num">${v}</b>${d}</span></li>`;
   const sd=(k,v)=>{const s=fmt(k,v);return BOOL.has(k)||/^[+-]/.test(s)?s:'+'+s};
   const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||(!emp&&TC[d])).map(([k,d])=>li(esc(k),fmt(k,T[d]),emp||T[d]===TC[d]?'':dl(sd(k,T[d]-TC[d]),T[d]>TC[d]?'up':'dn'),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`)).join('');
-  out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2></div>
+  out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><button type="button" class="btn pri" id="lo-equip" title="Equip suggested set to ${attr(loName(LO.sel))}">Equip to ${esc(loName(LO.sel))}</button></div>
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots cat-grid">${set.map(card).join('')}</div>
   ${tsec}
@@ -295,7 +295,8 @@ $('lo-tabs').addEventListener('keydown',e=>{const t=e.target.closest('[data-lo-e
   if(e.key==='Enter')endRename(+t.dataset.loEdit,t.value);else if(e.key==='Escape')endRename(+t.dataset.loEdit,null)});
 $('lo-tabs').addEventListener('focusout',e=>{const t=e.target.closest&&e.target.closest('[data-lo-edit]');if(t)endRename(+t.dataset.loEdit,t.value)});
 function syncLoBar(){
-  $('lo-equip').disabled=!last;$('lo-equip').textContent='Equip to '+loName(LO.sel);$('lo-equip').title='Equip suggested set to '+loName(LO.sel);}
+  const b=$('lo-equip');if(!b)return;/* the button is drawn with the results */
+  b.disabled=!last;b.textContent='Equip to '+loName(LO.sel);b.title='Equip suggested set to '+loName(LO.sel)}
 function pickLo(i){LO.sel=i;saveLo();renderLoBar();clearTimeout(tm);run()}
 $('lo-tabs').addEventListener('click',e=>{
   const x=e.target.closest('[data-lo-del]'),b=e.target.closest('[data-lo]'),r=e.target.closest('[data-lo-ren]');
@@ -306,8 +307,8 @@ $('lo-tabs').addEventListener('click',e=>{
   else if(b)pickLo(+b.dataset.lo)});
 $('lo-add').onclick=()=>{let k=LO.list.length+1;while(LO.list.some(l=>l.name.trim()==='Loadout '+k))k++;
   LO.list.push({name:'Loadout '+k,items:[],titles:[]});pickLo(LO.list.length-1)};
-$('lo-equip').onclick=()=>{if(!last)return;const lo=LO.list[LO.sel];
-  lo.items=last.set.map(c=>({n:c.n,t:last.tier,rf:last.rl}));lo.titles=last.tis.map(c=>c.i);saveLo();clearTimeout(tm);run()};
+$('out').addEventListener('click',e=>{if(!e.target.closest('#lo-equip')||!last)return;const lo=LO.list[LO.sel];
+  lo.items=last.set.map(c=>({n:c.n,t:last.tier,rf:last.rl}));lo.titles=last.tis.map(c=>c.i);saveLo();clearTimeout(tm);run()});
 /* page routing: #optimizer (default) and #my-items */
 function route(){const pg=location.hash==='#my-items';view=pg?'items':'opt';
   document.querySelector('.wrap').classList.toggle('hide',pg);$('items-page').classList.toggle('hide',!pg);

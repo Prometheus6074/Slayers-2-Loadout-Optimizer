@@ -137,7 +137,8 @@ function run(){
   /* what each piece adds: the score with it vs. the same set without it */
   const gainOf=new Map();
   res.set.forEach(c=>{const o=f(total([BASE,...res.set.filter(x=>x!==c).map(x=>x.v)]));gainOf.set(c,o>0?sc/o-1:null)});
-  const gn=c=>{const g=gainOf.get(c);return g==null?'':`<p class="hint">Adds ${g>=0?'+':''}${n2(g*100,1)}% to the score</p>`};
+  const gn=c=>{const g=gainOf.get(c);return g==null?'':`<span class="gain" title="How much this piece adds to the score">${g>=0?'+':''}${n2(g*100,1)}% score</span>`};
+  const otile=(c,key,on,gain,pic)=>`<button type="button" class="row r${c.r}${on?' on':''}" data-o="${EI[key]}" style="--rc:${RC[c.r]||RC[1]}" aria-pressed="false"><span class="pic">${pic}</span><span class="nm">${esc(c.n)}</span>${gain}</button>`;
   /* upgrade finder: pieces of the best set you don't own yet (if \"Only items I own\" is on, search again with every item) */
   let ups=[],upNote='';
   if(!auto){
@@ -147,30 +148,26 @@ function run(){
     ups=usrc.filter(c=>!c.T&&!ownedSet.has(c.n)).map(c=>{const o=f(total([BASE,...usrc.filter(x=>x!==c).map(x=>x.v)]));return{...c,g:o>0?full/o-1:null}}).sort((a,b)=>(b.g||0)-(a.g||0));
     upNote=$('owned').checked?`Your best owned set scores ${g[1](sc)}. With these items the best possible set scores ${g[1](full)} (${full>=sc?'+':''}${n2((sc?full/sc-1:0)*100,1)}%).`:'These pieces of the best set are not in your owned items yet.'}
   const pr=o=>o?Object.keys(o).map(k=>k+' ×'+o[k]).join(', '):'';
-  const upsec=ups.length?`<h2 class="sub">Upgrades to get</h2><p class="hint">${upNote}</p><div class="slots">${ups.map(u=>`<div class="slot" style="--rc:${RC[u.r]||RC[1]}">${ico(u)}<span class="k">${u.k}</span><h3>${esc(u.n)}</h3><div class="tags">${u.cl?`<span class="tag">${u.cl}</span>`:''}${u.ser?`<span class="tag set">${u.ser} set</span>`:''}${u.fl?`<span class="tag">${u.fl}</span>`:''}</div>${u.g==null?'':`<p class="hint">Adds ${u.g>=0?'+':''}${n2(u.g*100,1)}% to the best set</p>`}<p class="hint">${u.pr?'Cost: '+esc(pr(u.pr)):'Cost not in the save'}</p></div>`).join('')}</div>`:'';
+  const upsec=ups.length?`<h2 class="sub">Upgrades to get</h2><p class="hint">${upNote}</p><div class="slots cat-grid">${ups.map(u=>otile(u,u.n,false,u.g==null?'':`<span class="gain">${u.g>=0?'+':''}${n2(u.g*100,1)}% to best set</span>`,ico(u))).join('')}</div>`:'';
   const qx=k=>`<label class="qx"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
   if(lastEx&&!exSet.has(lastEx.k))lastEx=null;
   const exNote=lastEx?`<p class="hint exnote">Excluded <b>${esc(lastEx.name)}</b> from the calculation. <button type="button" class="btn" data-undo>Undo</button></p>`:'';
-  const card=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}">${ico(c)}<span class="k">${c.k}</span><h3>${c.n}</h3>
-  <div class="tags">${c.cl?`<span class="tag">${c.cl}</span>`:''}${c.ser?`<span class="tag set">${c.ser} set</span>`:''}${ownedSet.has(c.n)?'<span class="tag own">owned</span>':''}${c.fl?`<span class="tag">${c.fl}</span>`:''}</div>
-  ${gn(c)}<ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx(c.n)}</div>`;
-  const tcard=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">Title · ${c.rar}</span><h3>${esc(c.n)}</h3>
-  <div class="tags">${c.lock?'<span class="tag">locked</span>':'<span class="tag own">unlocked</span>'}</div>
-  ${gn(c)}<ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx('t:'+c.i)}</div>`;
-  const tsec=tOn?`<h2 class="sub">Titles</h2>${tis.length?`<div class="slots">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}`:'';
+  const card=c=>otile(c,c.n,ownedSet.has(c.n),gn(c),ico(c));
+  const tcard=c=>otile(c,'t:'+c.i,!c.lock,gn(c),`<b>${esc(c.n[0]||'')}</b>`);
+  const tsec=tOn?`<h2 class="sub">Titles</h2>${tis.length?`<div class="slots cat-grid">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}`:'';
   const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
   const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return`<tr class="${key?'key':''}"><td>${l}</td><td class="num">${fm(a)}</td><td class="num">${emp?'—':fm(b)}</td><td class="num ${emp?'':d>0.05?'up':d<-0.05?'dn':''}">${emp?'':Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%'}</td></tr>`};
   const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||(!emp&&TC[d])).map(([k,d])=>`<tr><td>${k}</td><td class="num">${fmt(k,T[d])}</td><td class="num">${emp?'—':fmt(k,TC[d])}</td><td class="num ${emp?'':T[d]>TC[d]?'up':T[d]<TC[d]?'dn':''}">${emp||T[d]===TC[d]?'':fmt(k,T[d]-TC[d])}</td></tr>`).join('');
   const eqh=`Equipped · ${esc(loName(LO.sel))}`;
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><span class="score num">${g[1](sc)}</span></div>
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
-  <div class="slots">${set.map(card).join('')}</div>
+  <div class="slots cat-grid">${set.map(card).join('')}</div>
   ${tsec}
   ${upsec}
   <div class="tw"><table><thead><tr><th>Result</th><th>Suggested</th><th>${eqh}</th><th>Change</th></tr></thead><tbody>
   ${dm.map(([k,l])=>row(l,M[k],MC[k],GOALS[k][1],k===p.goal)).join('')}
   ${p.goal==='custom'?row('Custom score',sc,scc,v=>n2(v,2),true):''}</tbody></table></div>
-  <div class="tw" style="margin-top:12px"><table><thead><tr><th>Stat totals</th><th>Suggested</th><th>${eqh}</th><th>Change</th></tr></thead><tbody>${sr}</tbody></table></div>`;syncLoBar()}
+  <div class="tw" style="margin-top:12px"><table><thead><tr><th>Stat totals</th><th>Suggested</th><th>${eqh}</th><th>Change</th></tr></thead><tbody>${sr}</tbody></table></div>`;markSel();syncLoBar()}
 let tm;document.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(run,120)});
 
 const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
@@ -182,9 +179,10 @@ const ownAgain=()=>{clearTimeout(tm);tm=setTimeout(run,120)};
 const rerun=()=>{view==='opt'?ownAgain():dirty=true};
 /* My items page: one section per item category plus one for titles. ENT = every row on the page (items first, then titles) */
 const ENT=[...DATA.items.map(it=>({T:0,it,key:it.n,cat:it.c})),...TT.map(t=>({T:1,it:t,key:'t:'+t.i,cat:'Titles'}))];
+const EI=Object.fromEntries(ENT.map((e,i)=>[e.key,i]));/* entry index by item name or 't:'+title id */
 const isOwn=e=>e.T?TOWN.has(e.it.i):ownedSet.has(e.it.n);
 const CATS=[...new Set(ENT.map(e=>e.cat))];
-let curCat=CATS[0],sel=-1,dT=3,dR=0;/* sel = item shown in the detail window; dT / dR = tier and refine shown there *//* My items shows one category at a time; searching or filtering shows matches from all of them */
+let curCat=CATS[0],sel=-1,selO=-1,dT=3,dR=0;/* sel / selO = item open in the detail window on My items / on the optimizer *//* sel = item shown in the detail window; dT / dR = tier and refine shown there *//* My items shows one category at a time; searching or filtering shows matches from all of them */
 const bf=o=>Object.keys(o).map(k=>k+' '+fmt(k,o[k])).join(', ');
 const rowHtml=i=>{const e=ENT[i],it=e.it,r=e.T?(TR[it.r]||1):it.r;
   return`<button type="button" class="row r${r}" data-i="${i}" style="--rc:${RC[r]||RC[1]}" aria-pressed="false"><span class="pic">${e.T?`<b>${esc(it.n[0]||'')}</b>`:ico(it)}</span><span class="nm">${esc(it.n)}</span></button>`};
@@ -200,13 +198,17 @@ const stRow=(k,v)=>`<li><span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/
 const stList=o=>{const ks=Object.keys(o).filter(k=>o[k]);return ks.length?`<ul class="d-st">${ks.map(k=>stRow(k,o[k])).join('')}</ul>`:'<p class="hint">No stats.</p>'};
 const opts=(a,v)=>a.map(x=>`<option value="${x[0]}"${x[0]===v?' selected':''}>${x[1]}</option>`).join('');
 function selectItem(i){sel=i===sel?-1:i;if(sel>=0){dT=+$('tier').value||3;dR=+$('refine').value||0}renderDetail()}
-function syncDetail(){if(sel<0)return;const e=ENT[sel],b=$('i-detail'),p=b.querySelector('[data-dp]'),x=b.querySelector('[data-dx]');if(p)p.checked=isOwn(e);if(x)x.checked=exSet.has(e.key)}
+const curSel=()=>view==='items'?sel:selO,curBox=()=>$(view==='items'?'i-detail':'o-detail');
+function selectO(i){selO=i===selO?-1:i;if(selO>=0){dT=+$('tier').value||3;dR=+$('refine').value||0}renderDetail()}
+function closeDetail(){if(view==='items')sel=-1;else selO=-1;renderDetail()}
+function markSel(){document.querySelectorAll('#out [data-o]').forEach(b=>{const on=+b.dataset.o===selO;b.classList.toggle('sel',on);b.setAttribute('aria-pressed',on)})}
+function syncDetail(){const s=curSel();if(s<0)return;const e=ENT[s],b=curBox(),p=b.querySelector('[data-dp]'),x=b.querySelector('[data-dx]');if(p)p.checked=isOwn(e);if(x)x.checked=exSet.has(e.key)}
 function renderDetail(){
-  const box=$('i-detail');
-  pgRows.forEach((r,i)=>{if(r){r.classList.toggle('sel',i===sel);r.setAttribute('aria-pressed',i===sel)}});
-  $('i-body').classList.toggle('has-sel',sel>=0);box.classList.toggle('hide',sel<0);
-  if(sel<0){box.innerHTML='';return}
-  const e=ENT[sel],it=e.it,r=e.T?(TR[it.r]||1):it.r,rw=e.T?it.r:(RN[it.r]||'');let body;
+  const isI=view==='items',s=curSel(),box=curBox();
+  if(isI)pgRows.forEach((r,i)=>{if(r){r.classList.toggle('sel',i===sel);r.setAttribute('aria-pressed',i===sel)}});else markSel();
+  $(isI?'i-body':'o-body').classList.toggle('has-sel',s>=0);box.classList.toggle('hide',s<0);
+  if(s<0){box.innerHTML='';return}
+  const e=ENT[s],it=e.it,r=e.T?(TR[it.r]||1):it.r,rw=e.T?it.r:(RN[it.r]||'');let body;
   if(e.T)body=`<dl class="d-meta"><dt>Type</dt><dd>${esc(it.c)}</dd></dl><h4>Stats (when equipped)</h4>${stList(it.b)}<h4>Collection bonus</h4>${stList(it.cb)}`;
   else{const P=DATA.pass||{},pa=it.ser&&P.items?[P.items[it.ser],['Top','Bottom'].includes(it.k)?P.outfit[it.ser]:null].filter(Boolean):[];
     const rows=[it.g?['Tier',`<div class="rad" role="radiogroup" aria-label="Tier">${[1,2,3].map(x=>`<label><input type="radio" name="dt" value="${x}" data-dt${x===dT?' checked':''}>Tier ${x}</label>`).join('')}</div>`]:null,
@@ -263,11 +265,13 @@ const shownIx=(rows,root)=>rows.map((r,i)=>i).filter(i=>rows[i]&&!rows[i].classL
 /* events */
 $('items-page').addEventListener('input',e=>e.stopPropagation());
 $('items-cats').addEventListener('click',e=>{const t=e.target.closest('.row');if(t)selectItem(+t.dataset.i)});
-$('i-detail').addEventListener('change',e=>{const t=e.target;if(sel<0)return;
-  if(t.matches('[data-dp]'))setMany([sel],t.checked);else if(t.matches('[data-dx]'))setEx([sel],t.checked);
-  else if(t.matches('[data-dt]')){dT=+t.value;renderDetail();const c=$('i-detail').querySelector('[data-dt]:checked');if(c)c.focus()}else if(t.matches('[data-dr]')){dR=+t.value;renderDetail()}});
-$('i-detail').addEventListener('click',e=>{if(e.target.closest('[data-close]'))selectItem(-1)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&sel>=0&&view==='items')selectItem(-1)});
+for(const id of['i-detail','o-detail']){const bx=$(id);
+  bx.addEventListener('change',e=>{const t=e.target,s=curSel();if(s<0)return;
+    if(t.matches('[data-dp]'))setMany([s],t.checked);else if(t.matches('[data-dx]'))setEx([s],t.checked);
+    else if(t.matches('[data-dt]')){dT=+t.value;renderDetail();const c=bx.querySelector('[data-dt]:checked');if(c)c.focus()}else if(t.matches('[data-dr]')){dR=+t.value;renderDetail()}});
+  bx.addEventListener('click',e=>{if(e.target.closest('[data-close]'))closeDetail()})}
+$('out').addEventListener('click',e=>{const t=e.target.closest('[data-o]');if(t)selectO(+t.dataset.o)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&curSel()>=0)closeDetail()});
 $('items-cats').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)setMany(shownIx(pgRows,b.closest('.cat')),b.dataset.a==='on')});
 $('pg-chips').addEventListener('click',e=>{if(e.target.closest('[data-exchip]')){exOnly=!exOnly;syncEx();pgFilter();return}
   const b=e.target.closest('[data-chip]');if(!b)return;

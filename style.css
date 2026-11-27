@@ -139,3 +139,10 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 .rad{display:flex;flex-wrap:wrap;gap:6px 16px}.rad label{display:flex;align-items:center;gap:6px;color:var(--ink);font-size:14px;cursor:pointer}
 .d-pas{display:grid;gap:4px}.d-pas.off{opacity:.55}
 @media(prefers-reduced-motion:reduce){input[type=radio]{transition:none}}
+
+/* optimizer results use the same tiles and detail window */
+#o-body{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+#o-body.has-sel{grid-template-columns:minmax(0,1fr) 340px}
+.slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));margin-bottom:16px}
+.cat-grid .gain{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+@media(max-width:1180px){#o-body.has-sel{grid-template-columns:1fr}#o-detail{position:fixed;left:8px;right:8px;bottom:8px;top:auto;max-height:62vh;z-index:5;box-shadow:0 10px 40px rgba(0,0,0,.45)}}

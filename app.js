@@ -138,7 +138,7 @@ function run(){
   const gainOf=new Map();
   res.set.forEach(c=>{const o=f(total([BASE,...res.set.filter(x=>x!==c).map(x=>x.v)]));gainOf.set(c,o>0?sc/o-1:null)});
   const gn=c=>{const g=gainOf.get(c);return g==null?'':`<span class="gain" title="How much this piece adds to the score">${g>=0?'+':''}${n2(g*100,1)}% score</span>`};
-  const otile=(c,key,on,gain,pic)=>`<button type="button" class="row r${c.r}${on?' on':''}" data-o="${EI[key]}" style="--rc:${RC[c.r]||RC[1]}" aria-pressed="false"><span class="pic">${pic}</span><span class="nm">${esc(c.n)}</span>${gain}</button>`;
+  const otile=(c,key,on,gain,pic)=>`<button type="button" class="row r${c.r}${on?' on':''}${pic===null?' tt':''}" data-o="${EI[key]}" style="--rc:${RC[c.r]||RC[1]}" aria-pressed="false">${pic===null?'':`<span class="pic">${pic}</span>`}<span class="nm">${esc(c.n)}</span>${gain}</button>`;
   /* upgrade finder: pieces of the best set you don't own yet (if \"Only items I own\" is on, search again with every item) */
   let ups=[],upNote='';
   if(!auto){
@@ -153,7 +153,7 @@ function run(){
   if(lastEx&&!exSet.has(lastEx.k))lastEx=null;
   const exNote=lastEx?`<p class="hint exnote">Excluded <b>${esc(lastEx.name)}</b> from the calculation. <button type="button" class="btn" data-undo>Undo</button></p>`:'';
   const card=c=>otile(c,c.n,ownedSet.has(c.n),gn(c),ico(c));
-  const tcard=c=>otile(c,'t:'+c.i,!c.lock,gn(c),`<b>${esc(c.n[0]||'')}</b>`);
+  const tcard=c=>otile(c,'t:'+c.i,!c.lock,gn(c),null);
   const tsec=tOn?`<h2 class="sub">Titles</h2>${tis.length?`<div class="slots cat-grid">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}`:'';
   const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
   const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return`<tr class="${key?'key':''}"><td>${l}</td><td class="num">${fm(a)}</td><td class="num">${emp?'—':fm(b)}</td><td class="num ${emp?'':d>0.05?'up':d<-0.05?'dn':''}">${emp?'':Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%'}</td></tr>`};
@@ -185,7 +185,7 @@ const CATS=[...new Set(ENT.map(e=>e.cat))];
 let curCat=CATS[0],sel=-1,selO=-1,dT=3,dR=0;/* sel / selO = item open in the detail window on My items / on the optimizer *//* sel = item shown in the detail window; dT / dR = tier and refine shown there *//* My items shows one category at a time; searching or filtering shows matches from all of them */
 const bf=o=>Object.keys(o).map(k=>k+' '+fmt(k,o[k])).join(', ');
 const rowHtml=i=>{const e=ENT[i],it=e.it,r=e.T?(TR[it.r]||1):it.r;
-  return`<button type="button" class="row r${r}" data-i="${i}" style="--rc:${RC[r]||RC[1]}" aria-pressed="false"><span class="pic">${e.T?`<b>${esc(it.n[0]||'')}</b>`:ico(it)}</span><span class="nm">${esc(it.n)}</span></button>`};
+  return`<button type="button" class="row r${r}${e.T?' tt':''}" data-i="${i}" style="--rc:${RC[r]||RC[1]}" aria-pressed="false">${e.T?'':`<span class="pic">${ico(it)}</span>`}<span class="nm">${esc(it.n)}</span></button>`};
 $('items-cats').innerHTML=CATS.map(c=>{const ix=ENT.map((_,i)=>i).filter(i=>ENT[i].cat===c);
   return`<section class="cat" data-c="${esc(c)}"><div class="cat-head"><h2>${esc(c)}<span class="num" data-cc></span></h2><div class="cat-btns"><button type="button" class="btn" data-a="on">Tick shown</button><button type="button" class="btn" data-a="off">Untick shown</button></div></div><div class="cat-grid">${ix.map(rowHtml).join('')}</div></section>`}).join('');
 $('pg-chips').innerHTML='<button type="button" class="btn hide" id="pg-exchip" aria-pressed="false" data-exchip>Unincluded <span class="num" id="pg-exnum"></span></button>'+CATS.map(c=>`<button type="button" class="btn" data-chip="${esc(c)}">${esc(c)} <span class="num"></span></button>`).join('');

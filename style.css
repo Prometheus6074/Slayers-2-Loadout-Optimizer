@@ -164,3 +164,4 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 .rs .si{width:20px;height:20px}
 .rv{display:grid;justify-items:end;line-height:1.25}
 .rv em{font-style:normal;font-size:12px}
+.slots .qx{width:100%;margin-top:6px}

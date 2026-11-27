@@ -134,14 +134,11 @@ function run(){
   const T=total([BASE,...set.map(c=>c.v),...tis.map(c=>c.v)]),TC=total([BASE,...cur,...ctv]);
   const M=metrics(T,p),MC=metrics(TC,p),g=GOALS[p.goal];
   const sc=f(T),scc=f(TC);
-  /* what each piece adds: the score with it vs. the same set without it */
-  const gainOf=new Map();
-  res.set.forEach(c=>{const o=f(total([BASE,...res.set.filter(x=>x!==c).map(x=>x.v)]));gainOf.set(c,o>0?sc/o-1:null)});
-  const gn=c=>{const g=gainOf.get(c);return g==null?'':`<span class="gain" title="How much this piece adds to the score">${g>=0?'+':''}${n2(g*100,1)}% score</span>`};
+  const qx=k=>`<label class="qx"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
   /* each card carries its own stats (stats are read at the tier and refine chosen on the left) */
   const cst=c=>{if(c.T){const t=tById[c.i];return stList(t.b)+(Object.keys(t.cb).some(k=>t.cb[k])?`<h4 class="c-lbl">Collection bonus</h4>${stList(t.cb)}`:'')}
     const o={};ST.forEach((k,d)=>{if(c.v[d])o[k]=c.v[d]});return stList(o)};
-  const otile=(c,key,on,gain,pic)=>`<div class="row r${c.r}${on?' on':''}${pic===null?' tt':''}" style="--rc:${RC[c.r]||RC[1]}">${pic===null?'':`<span class="pic">${pic}</span>`}<span class="nm">${esc(c.n)}</span>${gain}${cst(c)}</div>`;
+  const otile=(c,key,on,gain,pic)=>`<div class="row r${c.r}${on?' on':''}${pic===null?' tt':''}" style="--rc:${RC[c.r]||RC[1]}">${pic===null?'':`<span class="pic">${pic}</span>`}<span class="nm">${esc(c.n)}</span>${gain}${cst(c)}${qx(key)}</div>`;
   /* upgrade finder: pieces of the best set you don't own yet (if \"Only items I own\" is on, search again with every item) */
   let ups=[],upNote='';
   if(!auto){
@@ -152,11 +149,10 @@ function run(){
     upNote=$('owned').checked?`Your best owned set scores ${g[1](sc)}. With these items the best possible set scores ${g[1](full)} (${full>=sc?'+':''}${n2((sc?full/sc-1:0)*100,1)}%).`:'These pieces of the best set are not in your owned items yet.'}
   const pr=o=>o?Object.keys(o).map(k=>k+' ×'+o[k]).join(', '):'';
   const upsec=ups.length?`<h2 class="sub">Upgrades to get</h2><p class="hint">${upNote}</p><div class="slots cat-grid">${ups.map(u=>otile(u,u.n,false,u.g==null?'':`<span class="gain">${u.g>=0?'+':''}${n2(u.g*100,1)}% to best set</span>`,ico(u))).join('')}</div>`:'';
-  const qx=k=>`<label class="qx"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
   if(lastEx&&!exSet.has(lastEx.k))lastEx=null;
   const exNote=lastEx?`<p class="hint exnote">Excluded <b>${esc(lastEx.name)}</b> from the calculation. <button type="button" class="btn" data-undo>Undo</button></p>`:'';
-  const card=c=>otile(c,c.n,ownedSet.has(c.n),gn(c),ico(c));
-  const tcard=c=>otile(c,'t:'+c.i,!c.lock,gn(c),null);
+  const card=c=>otile(c,c.n,ownedSet.has(c.n),'',ico(c));
+  const tcard=c=>otile(c,'t:'+c.i,!c.lock,'',null);
   const tsec=tOn?`<h2 class="sub">Titles</h2>${tis.length?`<div class="slots cat-grid">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}`:'';
   const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
   const dl=(t,c)=>`<em class="num ${c}">(${t})</em>`;

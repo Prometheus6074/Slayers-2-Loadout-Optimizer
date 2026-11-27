@@ -13,6 +13,7 @@
 <nav class="nav" aria-label="Pages"><a id="nav-opt" href="#optimizer" aria-current="page">Optimizer</a><a id="nav-items" href="#my-items">My items<span class="badge hide" id="nav-badge"></span></a></nav>
 </header>
 <div class="wrap">
+<div class="side">
 <aside class="panel ctl">
 <h2>Goal</h2>
 <label>Maximize
@@ -51,14 +52,17 @@
 <div class="two"><label>Set tier<select id="tier"><option value="1">1 (×1)</option><option value="2">2 (×1.15)</option><option value="3" selected>3 (×1.3)</option></select></label>
 <label>Refine level<select id="refine"></select></label></div>
 </aside>
-<main>
-<div class="panel lo" id="lo-bar">
+<section class="panel lo" id="lo-bar" aria-label="Loadouts">
+<h2>Loadouts <span class="lo-n" id="lo-n"></span></h2>
 <div class="lo-tabs" id="lo-tabs" role="group" aria-label="Loadouts"></div>
-<div class="lo-act"><label class="lo-name">Rename<input type="text" id="lo-name" maxlength="24" autocomplete="off"></label>
-<button type="button" class="btn" id="lo-add">+ Add new loadout</button><button type="button" class="btn pri" id="lo-equip" disabled>Equip suggested set</button></div>
+<button type="button" class="lo-add" id="lo-add"><span aria-hidden="true">+</span> Add a loadout</button>
+<label class="lo-name">Rename<input type="text" id="lo-name" maxlength="24" autocomplete="off"></label>
+<button type="button" class="btn pri" id="lo-equip" disabled>Equip suggested set</button>
+</section>
 </div>
+<main>
 <div id="o-body"><div class="panel" id="out"></div>
-<aside class="panel res" id="o-res" aria-label="Results"></aside></div>
+<aside class="panel res" id="o-res" aria-label="Stat totals"></aside></div>
 
 </main>
 </div>

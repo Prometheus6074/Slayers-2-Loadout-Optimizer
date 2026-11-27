@@ -132,8 +132,8 @@ function run(){
   const lo=LO.list[LO.sel],cur=lo.items.map(c=>vec(byName[c.n],c.t,c.rf)),
     ctv=tOn?lo.titles.map(i=>tById[i]).map(t=>tvec(TOWN.has(t.i)?t.b:tadd(t.b,t.cb))):[],emp=!cur.length&&!ctv.length;
   const T=total([BASE,...set.map(c=>c.v),...tis.map(c=>c.v)]),TC=total([BASE,...cur,...ctv]);
-  const M=metrics(T,p),MC=metrics(TC,p),g=GOALS[p.goal];
-  const sc=f(T),scc=f(TC);
+  const g=GOALS[p.goal];
+  const sc=f(T);
   const qx=k=>`<label class="qx"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
   /* each card carries its own stats (stats are read at the tier and refine chosen on the left) */
   const cst=c=>{if(c.T){const t=tById[c.i];return stList(t.b)+(Object.keys(t.cb).some(k=>t.cb[k])?`<h4 class="c-lbl">Collection bonus</h4>${stList(t.cb)}`:'')}
@@ -154,10 +154,8 @@ function run(){
   const card=c=>otile(c,c.n,ownedSet.has(c.n),'',ico(c));
   const tcard=c=>otile(c,'t:'+c.i,!c.lock,'',null);
   const tsec=tOn?`<h2 class="sub">Titles</h2>${tis.length?`<div class="slots cat-grid">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}`:'';
-  const dm=[['hit','Hit damage'],['crit','Crit hit'],['exp','Per hit with crits'],['hp','Max HP'],['def','Defense (any hit size)'],['sta','Max stamina'],['spd','Movement speed']];
   const dl=(t,c)=>`<em class="num ${c}">(${t})</em>`;
   const li=(l,v,d,key,ic)=>`<li class="${key?'key':''}"><span class="rn">${ic||''}${l}</span><span class="rv"><b class="num">${v}</b>${d}</span></li>`;
-  const row=(l,a,b,fm,key)=>{const d=b?(a/b-1)*100:0;return li(l,fm(a),emp?'':dl(Math.abs(d)<0.05?'0%':(d>0?'+':'')+n2(d,1)+'%',d>0.05?'up':d<-0.05?'dn':''),key)};
   const sd=(k,v)=>{const s=fmt(k,v);return BOOL.has(k)||/^[+-]/.test(s)?s:'+'+s};
   const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||(!emp&&TC[d])).map(([k,d])=>li(esc(k),fmt(k,T[d]),emp||T[d]===TC[d]?'':dl(sd(k,T[d]-TC[d]),T[d]>TC[d]?'up':'dn'),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`)).join('');
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2></div>
@@ -165,8 +163,7 @@ function run(){
   <div class="slots cat-grid">${set.map(card).join('')}</div>
   ${tsec}
   ${upsec}`;
-  $('o-res').innerHTML=`<h2 class="sub">Results</h2><ul class="rs">${dm.map(([k,l])=>row(l,M[k],MC[k],GOALS[k][1],k===p.goal)).join('')}${p.goal==='custom'?row('Custom score',sc,scc,v=>n2(v,2),true):''}</ul>
-  <h2 class="sub">Stat totals</h2><ul class="rs">${sr}</ul>`;
+  $('o-res').innerHTML=`<h2 class="sub">Stat totals</h2><ul class="rs">${sr}</ul>`;
   $('o-body').classList.add('has-res');syncLoBar()}
 let tm;document.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(run,120)});
 
@@ -284,7 +281,8 @@ $('out').addEventListener('click',e=>{if(e.target.closest('[data-undo]')&&lastEx
 /* loadout bar */
 function renderLoBar(){
   const many=LO.list.length>2;
-  $('lo-tabs').innerHTML=LO.list.map((l,i)=>`<span class="lo-tab${i===LO.sel?' on':''}"><button type="button" class="btn" data-lo="${i}" aria-pressed="${i===LO.sel}">${esc(loName(i))}</button>${many?`<button type="button" class="lo-x" data-lo-del="${i}" aria-label="Delete ${esc(loName(i))}">×</button>`:''}</span>`).join('');
+  $('lo-tabs').innerHTML=LO.list.map((l,i)=>`<div class="lo-tab${i===LO.sel?' on':''}"><button type="button" class="lo-pick" data-lo="${i}" aria-pressed="${i===LO.sel}">${esc(loName(i))}</button>${many?`<button type="button" class="lo-x" data-lo-del="${i}" aria-label="Delete ${esc(loName(i))}">×</button>`:''}</div>`).join('');
+  $('lo-n').textContent=LO.list.length;
   $('lo-name').value=LO.list[LO.sel].name;$('lo-name').placeholder='Loadout '+(LO.sel+1);
   syncLoBar()}
 function syncLoBar(){

@@ -78,17 +78,6 @@ tr.key td{background:var(--soft);font-weight:600}
 .chips .btn.active .num{color:inherit}
 
 
-.lo{display:grid;gap:10px;margin-bottom:16px}
-.lo-tabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.lo-tab{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:99px;background:var(--soft);overflow:hidden}
-.lo-tab .btn{border:0;background:transparent;border-radius:0;padding:6px 14px}
-.lo-tab:hover{border-color:var(--acc)}
-.lo-tab.on{background:var(--acc);border-color:var(--acc)}
-.lo-tab.on .btn,.lo-tab.on .lo-x{color:var(--accink)}
-.lo-x{border:0;background:transparent;color:var(--mute);cursor:pointer;padding:0 12px 0 0;font:inherit;font-size:18px;line-height:1}
-.lo-x:hover{opacity:.7}
-.lo-act{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
-.lo-name{flex:1 1 180px;max-width:280px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 
 .qx{display:flex;align-items:center;gap:6px;margin-top:4px;padding-top:6px;border-top:1px solid var(--line);font-size:12px;color:var(--mute);cursor:pointer}
@@ -164,4 +153,24 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 .rs .si{width:20px;height:20px}
 .rv{display:grid;justify-items:end;line-height:1.25}
 .rv em{font-style:normal;font-size:12px}
-.slots .qx{width:100%;margin-top:6px}
+.slots .qx{width:100%;margin-top:auto;padding-top:10px}
+
+/* optimizer: title cards keep the name at the top (Exclude row is pinned to the bottom by .slots .qx above) */
+.slots .row.tt{justify-content:flex-start}
+/* left column: Goal window with the Loadouts list underneath */
+.side{display:grid;gap:16px;align-content:start}
+.lo{display:grid;gap:8px}
+.lo h2{font-size:18px;margin-bottom:2px}
+.lo-n{font:500 13px "IBM Plex Sans",system-ui,sans-serif;color:var(--mute);margin-left:4px}
+.lo-tabs{display:grid;gap:6px}
+.lo-tab{display:flex;align-items:stretch;border:1px solid transparent;border-radius:8px;background:linear-gradient(90deg,var(--soft),color-mix(in srgb,var(--soft) 25%,var(--panel)))}
+.lo-tab:hover{border-color:var(--line)}
+.lo-tab.on{border-color:var(--acc);background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 28%,var(--panel)),color-mix(in srgb,var(--acc) 6%,var(--panel)))}
+.lo-pick{flex:1;min-width:0;text-align:left;font:inherit;font-weight:600;color:var(--ink);background:transparent;border:0;border-radius:8px;padding:10px 12px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lo-x{border:0;background:transparent;color:var(--mute);cursor:pointer;padding:0 12px;font:inherit;font-size:18px;line-height:1}
+.lo-x:hover{color:var(--bad)}
+.lo-add{display:flex;align-items:center;gap:10px;font:inherit;font-weight:500;color:var(--mute);background:transparent;border:0;border-radius:8px;padding:8px 12px;cursor:pointer;text-align:left}
+.lo-add:hover{color:var(--ink);background:var(--soft)}
+.lo-add span{font-size:18px;line-height:1}
+.lo-name{margin-top:6px}
+.lo .btn.pri{width:100%}

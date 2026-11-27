@@ -279,25 +279,33 @@ function quickEx(k){exSet.add(k);saveEx();lastEx={k,name:k.startsWith('t:')?tByI
 $('out').addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.qx;if(k!=null)quickEx(k)});
 $('out').addEventListener('click',e=>{if(e.target.closest('[data-undo]')&&lastEx){exSet.delete(lastEx.k);lastEx=null;saveEx();syncEx();pgFilter();clearTimeout(tm);run()}});
 /* loadout bar */
+let renaming=-1;/* index of the loadout being renamed inline, or -1 */
+const attr=t=>esc(t).replace(/"/g,'&quot;');
 function renderLoBar(){
   const many=LO.list.length>2;
-  $('lo-tabs').innerHTML=LO.list.map((l,i)=>`<div class="lo-tab${i===LO.sel?' on':''}"><button type="button" class="lo-pick" data-lo="${i}" aria-pressed="${i===LO.sel}">${esc(loName(i))}</button>${many?`<button type="button" class="lo-x" data-lo-del="${i}" aria-label="Delete ${esc(loName(i))}">×</button>`:''}</div>`).join('');
+  $('lo-tabs').innerHTML=LO.list.map((l,i)=>`<div class="lo-tab${i===LO.sel?' on':''}">${i===renaming
+    ?`<input type="text" class="lo-edit" data-lo-edit="${i}" maxlength="24" autocomplete="off" value="${attr(l.name)}" placeholder="Loadout ${i+1}" aria-label="Rename ${attr(loName(i))}">`
+    :`<button type="button" class="lo-pick" data-lo="${i}" aria-pressed="${i===LO.sel}">${esc(loName(i))}</button><span class="lo-opts"><button type="button" class="btn lo-ren" data-lo-ren="${i}">Rename</button>${many?`<button type="button" class="lo-x" data-lo-del="${i}" aria-label="Delete ${attr(loName(i))}">×</button>`:''}</span>`}</div>`).join('');
   $('lo-n').textContent=LO.list.length;
-  $('lo-name').value=LO.list[LO.sel].name;$('lo-name').placeholder='Loadout '+(LO.sel+1);
+  const ed=$('lo-tabs').querySelector('[data-lo-edit]');if(ed){ed.focus();ed.select()}
   syncLoBar()}
+function endRename(i,val){if(renaming!==i)return;renaming=-1;if(val!==null){LO.list[i].name=val.slice(0,24);saveLo()}renderLoBar()}
+$('lo-tabs').addEventListener('input',e=>e.stopPropagation());
+$('lo-tabs').addEventListener('keydown',e=>{const t=e.target.closest('[data-lo-edit]');if(!t)return;
+  if(e.key==='Enter')endRename(+t.dataset.loEdit,t.value);else if(e.key==='Escape')endRename(+t.dataset.loEdit,null)});
+$('lo-tabs').addEventListener('focusout',e=>{const t=e.target.closest&&e.target.closest('[data-lo-edit]');if(t)endRename(+t.dataset.loEdit,t.value)});
 function syncLoBar(){
-  $('lo-equip').disabled=!last;$('lo-equip').textContent='Equip suggested set to '+loName(LO.sel);}
+  $('lo-equip').disabled=!last;$('lo-equip').textContent='Equip to '+loName(LO.sel);$('lo-equip').title='Equip suggested set to '+loName(LO.sel);}
 function pickLo(i){LO.sel=i;saveLo();renderLoBar();clearTimeout(tm);run()}
 $('lo-tabs').addEventListener('click',e=>{
-  const x=e.target.closest('[data-lo-del]'),b=e.target.closest('[data-lo]');
-  if(x){if(LO.list.length<=2)return;const i=+x.dataset.loDel;
+  const x=e.target.closest('[data-lo-del]'),b=e.target.closest('[data-lo]'),r=e.target.closest('[data-lo-ren]');
+  if(r){renaming=+r.dataset.loRen;renderLoBar();return}
+  if(x){renaming=-1;if(LO.list.length<=2)return;const i=+x.dataset.loDel;
     if(!confirm('Delete "'+loName(i)+'"?'))return;
     LO.list.splice(i,1);if(i<LO.sel)LO.sel--;LO.sel=Math.min(LO.sel,LO.list.length-1);saveLo();renderLoBar();clearTimeout(tm);run()}
   else if(b)pickLo(+b.dataset.lo)});
 $('lo-add').onclick=()=>{let k=LO.list.length+1;while(LO.list.some(l=>l.name.trim()==='Loadout '+k))k++;
   LO.list.push({name:'Loadout '+k,items:[],titles:[]});pickLo(LO.list.length-1)};
-$('lo-name').addEventListener('input',e=>{LO.list[LO.sel].name=e.target.value.slice(0,24);saveLo();
-  const b=document.querySelector(`#lo-tabs [data-lo="${LO.sel}"]`);if(b)b.textContent=loName(LO.sel);syncLoBar()});
 $('lo-equip').onclick=()=>{if(!last)return;const lo=LO.list[LO.sel];
   lo.items=last.set.map(c=>({n:c.n,t:last.tier,rf:last.rl}));lo.titles=last.tis.map(c=>c.i);saveLo();clearTimeout(tm);run()};
 /* page routing: #optimizer (default) and #my-items */

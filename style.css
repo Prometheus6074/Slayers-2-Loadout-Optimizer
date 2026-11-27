@@ -167,10 +167,18 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 .lo-tab:hover{border-color:var(--line)}
 .lo-tab.on{border-color:var(--acc);background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 28%,var(--panel)),color-mix(in srgb,var(--acc) 6%,var(--panel)))}
 .lo-pick{flex:1;min-width:0;text-align:left;font:inherit;font-weight:600;color:var(--ink);background:transparent;border:0;border-radius:8px;padding:10px 12px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lo-x{border:0;background:transparent;color:var(--mute);cursor:pointer;padding:0 12px;font:inherit;font-size:18px;line-height:1}
+.lo-x{border:0;background:transparent;color:var(--mute);cursor:pointer;padding:0 8px;font:inherit;font-size:18px;line-height:1}
 .lo-x:hover{color:var(--bad)}
 .lo-add{display:flex;align-items:center;gap:10px;font:inherit;font-weight:500;color:var(--mute);background:transparent;border:0;border-radius:8px;padding:8px 12px;cursor:pointer;text-align:left}
 .lo-add:hover{color:var(--ink);background:var(--soft)}
 .lo-add span{font-size:18px;line-height:1}
-.lo-name{margin-top:6px}
-.lo .btn.pri{width:100%}
+/* Equip sits top right of the panel; Rename (and delete) show on hover / keyboard focus of a loadout row */
+.lo-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
+.lo-head h2{margin:0;white-space:nowrap}
+.lo-head .btn{min-width:0;max-width:64%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lo-opts{display:none;align-items:center;gap:2px;padding-right:6px}
+.lo-tab:hover .lo-opts,.lo-tab:focus-within .lo-opts{display:flex}
+@media(hover:none){.lo-tab.on .lo-opts{display:flex}}
+.lo-ren{padding:4px 10px;font-size:12px;font-weight:600}
+.lo-edit{flex:1;min-width:0;border:0;background:transparent;border-radius:8px;padding:10px 12px;font-weight:600}
+.lo-edit:focus-visible{outline-offset:-2px}

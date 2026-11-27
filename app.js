@@ -145,11 +145,11 @@ function run(){
     ups=usrc.filter(c=>!c.T&&!ownedSet.has(c.n)).map(c=>{const o=f(total([BASE,...usrc.filter(x=>x!==c).map(x=>x.v)]));return{...c,g:o>0?full/o-1:null}}).sort((a,b)=>(b.g||0)-(a.g||0));
     upNote=$('owned').checked?`Your best owned set scores ${g[1](sc)}. With these items the best possible set scores ${g[1](full)} (${full>=sc?'+':''}${n2((sc?full/sc-1:0)*100,1)}%).`:'These pieces of the best set are not in your owned items yet.'}
   const pr=o=>o?Object.keys(o).map(k=>k+' ×'+o[k]).join(', '):'';
-  const upsec=ups.length?`<h2 class="sub">Upgrades to get</h2><p class="hint">${upNote}</p><div class="slots">${ups.map(u=>`<div class="slot" style="--rc:${RC[u.r]||RC[1]}"><span class="k">${u.k}</span><h3>${esc(u.n)}</h3><div class="tags">${u.cl?`<span class="tag">${u.cl}</span>`:''}${u.ser?`<span class="tag set">${u.ser} set</span>`:''}${u.fl?`<span class="tag">${u.fl}</span>`:''}</div>${u.g==null?'':`<p class="hint">Adds ${u.g>=0?'+':''}${n2(u.g*100,1)}% to the best set</p>`}<p class="hint">${u.pr?'Cost: '+esc(pr(u.pr)):'Cost not in the save'}</p></div>`).join('')}</div>`:'';
+  const upsec=ups.length?`<h2 class="sub">Upgrades to get</h2><p class="hint">${upNote}</p><div class="slots">${ups.map(u=>`<div class="slot" style="--rc:${RC[u.r]||RC[1]}">${ico(u)}<span class="k">${u.k}</span><h3>${esc(u.n)}</h3><div class="tags">${u.cl?`<span class="tag">${u.cl}</span>`:''}${u.ser?`<span class="tag set">${u.ser} set</span>`:''}${u.fl?`<span class="tag">${u.fl}</span>`:''}</div>${u.g==null?'':`<p class="hint">Adds ${u.g>=0?'+':''}${n2(u.g*100,1)}% to the best set</p>`}<p class="hint">${u.pr?'Cost: '+esc(pr(u.pr)):'Cost not in the save'}</p></div>`).join('')}</div>`:'';
   const qx=k=>`<label class="qx"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
   if(lastEx&&!exSet.has(lastEx.k))lastEx=null;
   const exNote=lastEx?`<p class="hint exnote">Excluded <b>${esc(lastEx.name)}</b> from the calculation. <button type="button" class="btn" data-undo>Undo</button></p>`:'';
-  const card=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">${c.k}</span><h3>${c.n}</h3>
+  const card=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}">${ico(c)}<span class="k">${c.k}</span><h3>${c.n}</h3>
   <div class="tags">${c.cl?`<span class="tag">${c.cl}</span>`:''}${c.ser?`<span class="tag set">${c.ser} set</span>`:''}${ownedSet.has(c.n)?'<span class="tag own">owned</span>':''}${c.fl?`<span class="tag">${c.fl}</span>`:''}</div>
   ${gn(c)}<ul class="st">${ST.filter((k,d)=>c.v[d]).map(k=>`<li><span>${k}</span><span class="num">${fmt(k,c.v[I[k]])}</span></li>`).join('')}</ul>${qx(c.n)}</div>`;
   const tcard=c=>`<div class="slot" style="--rc:${RC[c.r]||RC[1]}"><span class="k">Title · ${c.rar}</span><h3>${esc(c.n)}</h3>
@@ -172,6 +172,8 @@ function run(){
 let tm;document.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(run,120)});
 
 const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+/* item picture from icons/<id>.png (made by tools/download_icons.py); removed again if the file is missing */
+const ico=it=>it&&it.ic?`<img class="ic" src="icons/${it.ic}.png" alt="" loading="lazy" onerror="this.remove()">`:'';
 const dot=it=>`<span style="color:${RC[it.r]||RC[1]}" aria-hidden="true">●</span>`;
 let dirty=true,view='opt',exOnly=false;
 const ownAgain=()=>{clearTimeout(tm);tm=setTimeout(run,120)};
@@ -182,7 +184,7 @@ const isOwn=e=>e.T?TOWN.has(e.it.i):ownedSet.has(e.it.n);
 const CATS=[...new Set(ENT.map(e=>e.cat))];
 const bf=o=>Object.keys(o).map(k=>k+' '+fmt(k,o[k])).join(', ');
 const rowHtml=i=>{const e=ENT[i],it=e.it,tags=e.T?[it.c,it.r].join(' · '):[it.k!==it.c?it.k:'',it.cl,it.fl].filter(Boolean).join(' · ');
-  return`<div class="row" data-i="${i}"><label class="own"><input type="checkbox" data-p="${i}">${dot(e.T?{r:TR[it.r]||1}:it)}<span class="nm">${esc(it.n)}</span><span class="k">${esc(tags)}</span></label><label class="ex"><input type="checkbox" data-x="${i}">Exclude</label></div>`};
+  return`<div class="row" data-i="${i}"><label class="own"><input type="checkbox" data-p="${i}">${e.T?'':ico(it)}${dot(e.T?{r:TR[it.r]||1}:it)}<span class="nm">${esc(it.n)}</span><span class="k">${esc(tags)}</span></label><label class="ex"><input type="checkbox" data-x="${i}">Exclude</label></div>`};
 $('items-cats').innerHTML=CATS.map(c=>{const ix=ENT.map((_,i)=>i).filter(i=>ENT[i].cat===c);
   return`<section class="cat" data-c="${esc(c)}"><div class="cat-head"><h2>${esc(c)}<span class="num" data-cc></span></h2><div class="cat-btns"><button type="button" class="btn" data-a="on">Tick shown</button><button type="button" class="btn" data-a="off">Untick shown</button></div></div><div class="cat-grid">${ix.map(rowHtml).join('')}</div></section>`}).join('');
 $('pg-chips').innerHTML='<button type="button" class="btn hide" id="pg-exchip" aria-pressed="false" data-exchip>Unincluded <span class="num" id="pg-exnum"></span></button>'+CATS.map(c=>`<button type="button" class="btn" data-chip="${esc(c)}">${esc(c)} <span class="num"></span></button>`).join('');

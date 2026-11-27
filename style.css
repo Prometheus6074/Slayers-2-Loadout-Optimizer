@@ -98,3 +98,6 @@ tr.key td{background:var(--soft);font-weight:600}
 
 .qx{display:flex;align-items:center;gap:6px;margin-top:4px;padding-top:6px;border-top:1px solid var(--line);font-size:12px;color:var(--mute);cursor:pointer}
 .exnote{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px}
+
+.slot .ic{float:right;width:44px;height:44px;margin:0 0 6px 8px;object-fit:contain}
+.row .ic{width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:6px}

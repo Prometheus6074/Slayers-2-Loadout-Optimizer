@@ -181,3 +181,13 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 .lo-ren{padding:4px 10px;font-size:12px;font-weight:600}
 .lo-edit{flex:1;min-width:0;border:0;background:transparent;border-radius:8px;padding:10px 12px;font-weight:600}
 .lo-edit:focus-visible{outline-offset:-2px}
+
+/* runes panel */
+.ru{display:grid;gap:10px}
+.ru h2{font-size:18px;margin:0}
+.ru-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#ru-body{display:grid;gap:10px}
+.ru-card{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}
+.ru-card h3{margin:0;font-size:14px}
+.ru-card select,.ru-card input[type=number]{background:var(--panel)}
+.ru-sub{display:grid;grid-template-columns:3fr 2fr;gap:8px;align-items:end}

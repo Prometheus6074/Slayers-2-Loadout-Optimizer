@@ -74,6 +74,29 @@ const ruSave=()=>{try{localStorage.setItem(RU_KEY,JSON.stringify(RU))}catch(e){}
 function runeV(){const v=new Array(D).fill(0);if(!RU.on)return v;
   RU.list.forEach(r=>{const K=RUD.kinds[r.kind],add=(k,t)=>{if(I[k]!==undefined)v[I[k]]+=ruNum(k,t)};
     add(RUD.main,r.hp);add(K.fixed,r.fx);r.subs.forEach(x=>{if(x.s)add(x.s,x.v)})});return v}
+
+/* skill tree (tab "Skill Tree"): the level of every node, starting from the save. A node only counts while what it hangs off is unlocked */
+const SK_KEY='ouwland-skilltree',TB=TREE.b,tBy=Object.fromEntries(TB.map(b=>[b.id,b])),R6=x=>Math.round(x*1e6)/1e6;
+let SK={};
+TB.forEach(b=>SK[b.id]=Math.min(b.st.length,Math.max(0,+TREE.save[b.id]||0)));
+try{const sv=JSON.parse(localStorage.getItem(SK_KEY));if(sv&&typeof sv==='object'&&!Array.isArray(sv))TB.forEach(b=>{if(sv[b.id]!==undefined)SK[b.id]=Math.min(b.st.length,Math.max(0,Math.round(+sv[b.id])||0))})}catch(e){}
+const skSave=()=>{try{localStorage.setItem(SK_KEY,JSON.stringify(SK))}catch(e){}};
+const skNeeds=b=>{const r=[];if(b.par)r.push({id:b.par,at:b.at});if(b.j)r.push({id:b.j.id,at:b.j.at});return r};/* the branch it hangs off at a level, plus a second branch for a few nodes */
+const skOk=b=>skNeeds(b).every(q=>SK[q.id]>=q.at);
+function skFix(){for(let ch=true;ch;){ch=false;TB.forEach(b=>{if(SK[b.id]>0&&!skOk(b)){SK[b.id]=0;ch=true}})}}/* drop nodes that lost what they need; repeats because that can chain */
+skFix();
+function skStats(){const o={};TB.forEach(b=>{for(let i=0;i<SK[b.id];i++){const s=b.st[i].s;for(const k in s)o[k]=(o[k]||0)+s[k]}});for(const k in o)o[k]=R6(o[k]);return o}
+const SKFOLD=['Additional Damage','Crit Chance','Crit Damage Factor','Max Health'];/* these four are folded into the four base fields; every other tree stat is added to each set */
+const skAuto=()=>$('skauto').checked;
+function skBase(){const o=skStats(),B0=TREE.base;
+  return{base:R6(B0.hit+(o['Additional Damage']||0)),cc:R6(B0.crit+(o['Crit Chance']||0)),cb:R6(B0.critBonus+(o['Crit Damage Factor']||0)),hp:R6(B0.hp+(o['Max Health']||0))}}
+function skVecs(){const o=skStats(),fd=new Array(D).fill(0),rv=new Array(D).fill(0);
+  if(skAuto())for(const k in o){if(I[k]===undefined)continue;(SKFOLD.includes(k)?fd:rv)[I[k]]=o[k]}
+  return{fd,rv}}
+/* the four base fields show what the tree gives, and can't be typed in while "Calculate base stats from Skill Tree" is on */
+function skSync(){const au=skAuto(),b=skBase();
+  [['base',b.base,1],['cc',b.cc,100],['cb',b.cb,100],['hp',b.hp,1]].forEach(([id,v,m])=>{const e=$(id);e.readOnly=au;
+    e.title=au?'Worked out from your Skill Tree. Turn off "Calculate base stats from Skill Tree" in Settings to type your own.':'';if(au)e.value=R6(v*m)})}
 let last=null,lastEx=null;/* the suggestion on screen, so "Equip" knows what to save */
 function metrics(T,p){
   const g=n=>T[I[n]];
@@ -84,7 +107,7 @@ function metrics(T,p){
   let s=g('Movement Speed Factor');if(s>.25)s=.25+(s-.25)*.4;
   return{hit,crit:hit*m,exp:hit*(1+cp*(m-1)),hp,def:hp/Math.exp(p.hs.reduce((a,h)=>a+Math.log(Math.max(1,h-g('Damage Reduction'))*(1-eff)),0)/p.hs.length),sta:g('Max Stamina'),spd:1+Math.min(s,.4),cp,m}}
 function hitSizes(){const lo=Math.max(1,nz('dlo',5)),hi=Math.max(lo,nz('dhi',500)),n=9;return Array.from({length:n},(_,i)=>lo*Math.pow(hi/lo,i/(n-1)))}
-function params(){return{hs:hitSizes(),base:nz('base',3),cc:nz('cc',0)/100,cb:nz('cb',50)/100,hp:nz('hp',100),goal:$('goal').value,
+function params(){const a=skAuto()?skBase():null;return{hs:hitSizes(),base:a?a.base:nz('base',3),cc:a?a.cc:nz('cc',0)/100,cb:a?a.cb:nz('cb',50)/100,hp:a?a.hp:nz('hp',100),goal:$('goal').value,
   w:ST.map(k=>Math.max(0,parseFloat(document.querySelector(`[data-w="${k}"]`).value)||0))}}
 function scorer(p){return p.goal==='custom'?T=>T.reduce((a,x,d)=>a+x*p.w[d],0):T=>metrics(T,p)[p.goal]}
 function solve(C,f,S,oneCat,fs,base,TQ,lb){
@@ -120,7 +143,7 @@ const n2=(x,d=1)=>(Math.round(x*10**d)/10**d).toLocaleString('en',{maximumFracti
 const GOALS={exp:['Damage per hit (with crits)',v=>n2(v,2)],hit:['Hit damage',v=>n2(v,2)],crit:['Crit hit damage',v=>n2(v,2)],hp:['Max HP',v=>n2(v,0)],def:['Defense (hits you can take, any hit size)',v=>n2(v,2)],sta:['Max stamina',v=>n2(v,0)],spd:['Movement speed',v=>'×'+n2(v,3)],custom:['Custom score',v=>n2(v,2)]};
 function run(){
   last=null;
-  const p=params(),f=scorer(p);
+  skSync();const p=params(),f=scorer(p);
   for(const[id,sh]of[['f-dmg',['exp','hit','crit']],['f-hp',['hp','def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal));
   $('f-rng').classList.toggle('hide',p.goal!=='def');
   let base0=DATA.items.filter(i=>!isW(i)),wb0=DATA.items.filter(i=>isW(i)&&(!i.rq||!DATA.race||i.rq.includes(DATA.race)));
@@ -150,7 +173,7 @@ function run(){
       if(wl.some(i=>i.n===keep))wsel.value=keep}
     if(!wAuto){const x=wl.find(i=>i.n===wsel.value);fw=x?wv(x):null}}
   const pruneW=a=>a.filter((x,i)=>!a.some((y,j)=>j!==i&&y.v.every((q,d)=>q>=x.v[d])&&(y.v.some((q,d)=>q>x.v[d])||j<i)));
-  const tOn=$('tit').checked,BASE=total([tOn?collVec():new Array(D).fill(0),runeV()]);let TP=[];
+  const tOn=$('tit').checked,SKV=skVecs(),BASE=total([tOn?collVec():new Array(D).fill(0),runeV(),SKV.rv]);let TP=[];
   $('l-town').classList.toggle('hide',!tOn);
   if(tOn){const own=$('town').checked;
     const cand=TT.filter(t=>Object.keys(t.b).length&&!exSet.has('t:'+t.i)&&(!own||TOWN.has(t.i))).map(t=>({T:1,i:t.i,n:t.n,k:'Title',r:TR[t.r]||1,rar:t.r,lock:!TOWN.has(t.i),v:tvec(TOWN.has(t.i)?t.b:tadd(t.b,t.cb))}));
@@ -210,7 +233,8 @@ function run(){
   const dl=(t,c)=>`<em class="num ${c}">(${t})</em>`;
   const li=(l,v,d,key,ic)=>`<li class="${key?'key':''}"><span class="rn">${ic||''}${l}</span><span class="rv"><b class="num">${v}</b>${d}</span></li>`;
   const sd=(k,v)=>{const s=fmt(k,v);return BOOL.has(k)||/^[+-]/.test(s)?s:'+'+s};
-  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>T[d]||(!emp&&TC[d])).map(([k,d])=>li(esc(k),fmt(k,T[d]),emp||T[d]===TC[d]?'':dl(sd(k,T[d]-TC[d]),T[d]>TC[d]?'up':'dn'),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`)).join('');
+  const TD=T.map((x,d)=>x+SKV.fd[d]),TCD=TC.map((x,d)=>x+SKV.fd[d]);/* totals shown include the tree stats that sit in the base fields */
+  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>TD[d]||(!emp&&TCD[d])).map(([k,d])=>li(esc(k),fmt(k,TD[d]),emp||TD[d]===TCD[d]?'':dl(sd(k,TD[d]-TCD[d]),TD[d]>TCD[d]?'up':'dn'),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`)).join('');
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><button type="button" class="btn pri" id="lo-equip" title="Equip suggested set to ${attr(loName(LO.sel))}">Equip to ${esc(loName(LO.sel))}</button></div>
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots cat-grid">${set.map(card).join('')}</div>
@@ -364,11 +388,49 @@ $('lo-add').onclick=()=>{let k=LO.list.length+1;while(LO.list.some(l=>l.name.tri
   LO.list.push({name:'Loadout '+k,items:[],titles:[]});pickLo(LO.list.length-1)};
 $('out').addEventListener('click',e=>{if(!e.target.closest('#lo-equip')||!last)return;const lo=LO.list[LO.sel];
   lo.items=last.set.concat(last.wch?[last.wch]:[]).map(c=>{const r=trOf(c);return{n:c.n,t:r.t,rf:r.rf}});lo.titles=last.tis.map(c=>c.i);saveLo();clearTimeout(tm);run()});
-/* page routing: #optimizer (default) and #my-items */
-function route(){const pg=location.hash==='#my-items';view=pg?'items':'opt';
-  document.querySelector('.wrap').classList.toggle('hide',pg);$('items-page').classList.toggle('hide',!pg);
-  $('nav-opt').setAttribute('aria-current',pg?'false':'page');$('nav-items').setAttribute('aria-current',pg?'page':'false');
-  if(!pg&&dirty){dirty=false;run()}}
+/* Skill Tree page: a slider for every stat that has levels, a switch for every single node. Built once, then updated in place so dragging a slider is not interrupted */
+const skBuilt={};
+const skRoman=n=>['','I','II','III'][n]||'';
+const skAmt=(b,x)=>b.pc?'+'+R6(Math.round(x*1000)/10)+'%':'+'+R6(Math.round(x*100)/100);
+const skLvl=(b,n)=>b.st.slice(0,n).reduce((a,s)=>a+(s.s[Object.keys(b.st[0].s)[0]]||0),0);
+const skGrps=()=>[...new Set(TB.map(b=>b.grp))];
+function skCardHtml(b){
+  const tog=b.st.length===1&&!b.asc,pic=`<span class="tr-pic"><b aria-hidden="true">${esc(b.n[0])}</b>${b.ic?`<img class="tr-ic" src="icons/${b.ic}.png" alt="" loading="lazy" onload="this.previousElementSibling.remove()" onerror="this.remove()">`:''}</span>`;
+  const ctl=tog?`<label class="row tr-sw"><input type="checkbox" data-sk="${attr(b.id)}" aria-label="${attr(b.n)}"><span data-sw></span></label>`
+    :`<input type="range" min="0" max="${b.st.length}" step="1" value="0" data-sk="${attr(b.id)}" aria-label="${attr(b.n)} level">`;
+  return`<div class="tr-card" data-b="${attr(b.id)}">${pic}<div class="tr-bd"><div class="tr-hd"><b class="tr-t" data-t></b><span class="tr-lv num" data-lv></span></div><p class="tr-sub" data-sub></p>${ctl}<p class="tr-need" data-need></p></div></div>`}
+function skBuild(){
+  const gs=skGrps();
+  $('tree-page').innerHTML=`<div class="panel"><div class="head"><h2>Skill Tree</h2><span class="cat-btns"><button type="button" class="btn" id="sk-save">Reset to save</button><button type="button" class="btn" id="sk-clear">Clear all</button></span></div>
+<ul class="tr-sum" id="sk-sum"></ul><p class="hint" id="sk-note"></p></div>`
+   +gs.map(g=>`<section class="panel"><div class="head"><h2>${esc(tBy[g].n)}</h2></div><div class="tr-grid">${TB.filter(b=>b.grp===g).map(skCardHtml).join('')}</div></section>`).join('');
+  document.querySelectorAll('#tree-page .tr-card').forEach(c=>skBuilt[c.dataset.b]=c)}
+function skRefresh(){
+  TB.forEach(b=>{const c=skBuilt[b.id],lv=SK[b.id],ok=skOk(b),n=b.st.length,tog=n===1&&!b.asc,inp=c.querySelector('[data-sk]');
+    c.classList.toggle('on',lv>0);c.classList.toggle('lock',!ok);inp.disabled=!ok;
+    if(tog){inp.checked=lv>0;c.querySelector('[data-t]').textContent=b.n;c.querySelector('[data-sub]').textContent=b.d;c.querySelector('[data-sw]').textContent=lv>0?'On':'Off';c.querySelector('[data-lv]').textContent=''}
+    else{if(+inp.value!==lv)inp.value=lv;c.querySelector('[data-lv]').textContent='Lv '+lv+' / '+n;
+      if(b.asc){c.querySelector('[data-t]').textContent=b.n+(lv?' '+skRoman(lv):'');c.querySelector('[data-sub]').textContent=b.d[Math.max(lv,1)-1]+' You can follow only one Ascension.'}
+      else{c.querySelector('[data-t]').textContent=skAmt(b,skLvl(b,lv))+' '+b.t;c.querySelector('[data-sub]').textContent=b.n}}
+    const need=skNeeds(b).map(q=>`<span class="${SK[q.id]>=q.at?'yes':'no'}">${esc(tBy[q.id].n)} Lv ${q.at}</span>`),g=b.st[Math.max(lv,1)-1].g;
+    c.querySelector('[data-need]').innerHTML=(need.length?'Needs '+need.join(' + '):'')+(g?(need.length?' · ':'')+'<span class="mute">Character Lv '+g+'</span>':'')});
+  const o=skBase(),sp=TB.reduce((a,b)=>a+b.st.slice(0,SK[b.id]).reduce((x,s)=>x+s.c,0),0);
+  $('sk-sum').innerHTML=[['Base hit damage',R6(o.base)],['Base crit chance',R6(o.cc*100)+'%'],['Base crit bonus',R6(o.cb*100)+'%'],['Base max HP',R6(o.hp)],['Skill points spent',sp]]
+    .map(([k,v])=>`<li><span>${k}</span> <b class="num">${v}</b></li>`).join('');
+  $('sk-note').textContent=skAuto()?'The Optimizer uses these as your base stats. Character level requirements are shown but not checked.':'"Calculate base stats from Skill Tree" is off in Settings, so the Optimizer is using the base values you typed, not these levels.'}
+function skRender(){if(!$('sk-sum'))skBuild();skRefresh()}
+$('tree-page').addEventListener('input',e=>{e.stopPropagation();const t=e.target,id=t.dataset&&t.dataset.sk;if(!id)return;
+  const b=tBy[id];let v=t.type==='checkbox'?(t.checked?1:0):+t.value;if(!skOk(b))v=0;SK[id]=v;
+  if(b.asc&&v>0)TB.forEach(o=>{if(o.asc&&o!==b)SK[o.id]=0});/* only one Ascension */
+  skFix();skSave();skRefresh();rerun()});
+$('tree-page').addEventListener('click',e=>{const a=e.target.closest('#sk-save'),z=e.target.closest('#sk-clear');if(!a&&!z)return;
+  TB.forEach(b=>SK[b.id]=a?Math.min(b.st.length,TREE.save[b.id]||0):0);skFix();skSave();skRefresh();rerun()});
+/* page routing: #optimizer (default), #my-items and #skill-tree */
+function route(){const h=location.hash,pg=h==='#my-items',tr=h==='#skill-tree',op=!pg&&!tr;view=pg?'items':tr?'tree':'opt';
+  document.querySelector('.wrap').classList.toggle('hide',!op);$('items-page').classList.toggle('hide',!pg);$('tree-page').classList.toggle('hide',!tr);
+  [['nav-opt',op],['nav-items',pg],['nav-tree',tr]].forEach(([id,on])=>$(id).setAttribute('aria-current',on?'page':'false'));
+  if(tr)skRender();
+  if(op&&dirty){dirty=false;run()}}
 window.addEventListener('hashchange',()=>{route();window.scrollTo(0,0)});
 /* runes panel */
 function ruRender(){

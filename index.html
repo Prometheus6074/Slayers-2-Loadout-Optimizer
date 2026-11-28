@@ -10,7 +10,7 @@
 <body>
 <header>
 <h1>Slayers 2 Loadout Optimizer</h1>
-<nav class="nav" aria-label="Pages"><a id="nav-opt" href="#optimizer" aria-current="page">Optimizer</a><a id="nav-items" href="#my-items">My items<span class="badge hide" id="nav-badge"></span></a></nav>
+<nav class="nav" aria-label="Pages"><a id="nav-opt" href="#optimizer" aria-current="page">Optimizer</a><a id="nav-items" href="#my-items">My items<span class="badge hide" id="nav-badge"></span></a><a id="nav-tree" href="#skill-tree">Skill Tree</a></nav>
 </header>
 <div class="wrap">
 <div class="side">
@@ -70,6 +70,7 @@
 <div class="empty hide" id="pg-empty">No items match that search.</div></div>
 <aside class="panel detail hide" id="i-detail" aria-label="Item details"></aside></div>
 </div>
+<div id="tree-page" class="hide"></div>
 <dialog id="settings" aria-labelledby="set-title">
 <div class="dlg">
 <div class="dlg-head"><h2 id="set-title">Settings</h2><button type="button" class="icon-btn" data-dlg-close aria-label="Close settings" title="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -77,6 +78,9 @@
 <label class="row"><input type="checkbox" id="onecat" checked>One item per category</label>
 <label class="row"><input type="checkbox" id="owned">Only items I own</label>
 <label class="row"><input type="checkbox" id="noevt" checked>Hide unobtainable (dev and staff) items</label>
+</fieldset>
+<fieldset><legend>Base stats</legend>
+<label class="row"><input type="checkbox" id="skauto" checked>Calculate base stats from Skill Tree</label>
 </fieldset>
 <fieldset><legend>Titles</legend>
 <label class="row"><input type="checkbox" id="tit" checked>Include titles (3 boost slots)</label>
@@ -96,6 +100,7 @@
 </div>
 </dialog>
 <script src="data.js"></script>
+<script src="tree.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-"""Download every item icon listed in data.js into ./icons/<id>.png.
+"""Download every icon listed in data.js (items, stats) and tree.js (Skill Tree nodes) into ./icons/<id>.png.
 
 Run from anywhere:  python tools/download_icons.py
 Uses only the Python standard library. Safe to rerun: icons you already have are skipped.
@@ -13,6 +13,7 @@ import json, os, re, sys, time, urllib.request, urllib.parse, urllib.error
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_JS = os.path.join(ROOT, "data.js")
+TREE_JS = os.path.join(ROOT, "tree.js")
 ICON_DIR = os.path.join(ROOT, "icons")
 
 THUMB_API = "https://thumbnails.roblox.com/v1/assets"
@@ -113,15 +114,24 @@ def thumbnails(todo, failed):
         time.sleep(1)
 
 
-def main():
-    with open(DATA_JS, encoding="utf-8") as f:
+def load_const(path, name):
+    """Read the JSON after `const <name>=` in a data file. Returns None if the file is missing."""
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
         text = f.read()
-    data = json.loads(text.split("const DATA=", 1)[1].rstrip().rstrip(";"))
+    return json.loads(text.split(f"const {name}=", 1)[1].rstrip().rstrip(";"))
+
+
+def main():
+    data = load_const(DATA_JS, "DATA")
+    tree = load_const(TREE_JS, "TREE") or {"b": []}
     ids = sorted({str(i["ic"]) for i in data["items"] if i.get("ic")}
-                 | {str(v) for v in data.get("si", {}).values()})
+                 | {str(v) for v in data.get("si", {}).values()}
+                 | {str(b["ic"]) for b in tree["b"] if b.get("ic")})
     os.makedirs(ICON_DIR, exist_ok=True)
     todo = [i for i in ids if not os.path.exists(os.path.join(ICON_DIR, f"{i}.png"))]
-    print(f"{len(ids)} icons in data.js, {len(todo)} to download")
+    print(f"{len(ids)} icons in data.js + tree.js, {len(todo)} to download")
     if not todo:
         print("Nothing to do.")
         return 0

@@ -260,13 +260,21 @@ function run(){
   const li=(l,v,d,key,ic,at)=>`<li class="${key?'key':''}"${at||''}><span class="rn">${ic||''}${l}</span><span class="rv"><b class="num">${v}</b>${d}</span></li>`;
   const sd=(k,v)=>{const s=fmt(k,v);return BOOL.has(k)||/^[+-]/.test(s)?s:'+'+s};
   const TD=T.map((x,d)=>x+SKV.fd[d]),TCD=TC.map((x,d)=>x+SKV.fd[d]);/* totals shown include the tree stats that sit in the base fields */
-  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>TD[d]||(!emp&&TCD[d])).map(([k,d])=>li(esc(k),fmt(k,TD[d]),emp||TD[d]===TCD[d]?'':dl(sd(k,TD[d]-TCD[d]),TD[d]>TCD[d]?'up':'dn'),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`,` data-stat="${attr(k)}" role="button" tabindex="0" title="Show where this comes from"`)).join('');
   /* damage readout: hit damage with the chosen weapon's mastery, against the current loadout (with its own weapon's mastery) */
   const mmT=wch?msMul(wch.n):1,curW=wOn?lo.items.map(c=>byName[c.n]).find(i=>i&&isW(i)):null,mmC=curW?msMul(curW.n):1,
     mT=metrics(T,{...p,mm:mmT}),mC=metrics(TC,{...p,mm:mmC}),
     dd=(x,y)=>emp||Math.abs(x-y)<5e-3?'':dl((x>y?'+':'')+n2(x-y,2),x>y?'up':'dn'),
     dmg=[['Hit damage','hit'],['Crit hit damage','crit'],['Damage per hit (with crits)','exp']].map(([l,k])=>li(l,n2(mT[k],2),dd(mT[k],mC[k]),p.goal===k)).join('')
       +(wch&&msLv(wch.n)?li('Weapon mastery',esc(MASTERY.of[wch.n])+' '+msLv(wch.n)+' · ×'+n2(mmT,2),'',false):'');
+  /* Stat totals show what the game shows. Max Health, Additional Damage, Crit Chance and Crit Damage Factor are the final values (base and multipliers included, as in metrics());
+     every other stat is the plain total of its sources. Changes against the current loadout are in the same units. */
+  const FIN=M=>({'Max Health':M.hp,'Additional Damage':M.hit,'Crit Chance':M.cp,'Crit Damage Factor':M.m-1}),
+    fpct=k=>k==='Crit Chance'||k==='Crit Damage Factor',
+    fv=(k,d,A,M)=>k in FIN(M)?(fpct(k)?fmt(k,FIN(M)[k]):n2(FIN(M)[k],2)):fmt(k,A[d]),
+    fdl=(k,d,A,C,M,MC)=>{if(emp)return'';const fin=k in FIN(M),x=fin?FIN(M)[k]:A[d],y=fin?FIN(MC)[k]:C[d],t=x-y;
+      if(Math.abs(t)<(fin?(fpct(k)?5e-4:5e-3):1e-9))return'';
+      const s=fin&&!fpct(k)?n2(t,2):fmt(k,t);return dl(/^[+-]/.test(s)||BOOL.has(k)?s:'+'+s,t>0?'up':'dn')};
+  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>TD[d]||(!emp&&TCD[d])).map(([k,d])=>li(esc(k),fv(k,d,TD,mT),fdl(k,d,TD,TCD,mT,mC),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`,` data-stat="${attr(k)}" role="button" tabindex="0" title="Show where this comes from"`)).join('');
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><button type="button" class="btn pri" id="lo-equip" title="Equip suggested set to ${attr(loName(LO.sel))}">Equip to ${esc(loName(LO.sel))}</button></div>
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots cat-grid">${set.map(card).join('')}</div>
@@ -592,7 +600,7 @@ function sdHtml(k){
     if(fr.length||mm!==1)mul=`<section><h3 class="sd-sec">Then multiplied</h3>${sdList(ch.fac,fr)}${mm!==1?`<ul class="sd-rows"><li><span class="sd-l">Weapon mastery<small>${esc(MASTERY.of[B.wch.n])} ${msLv(B.wch.n)}</small></span><b class="num">x${n2(mm,2)}</b><span class="sd-bar"><i style="width:100%"></i></span></li></ul>`:''}
       <div class="sd-eq"><span class="num">${n2(added,2)} x ${n2(mult,4)}</span><b class="num">${n2(final,2)}</b></div></section>`}
   if(ch&&ch.cap&&added>ch.cap){final=ch.cap;note='Capped at '+sdNum(k,ch.cap)+'.'}
-  const shown=B.TD[d],hint=ch&&(baseV||ch.fac)?`Stat Totals lists <b>${sdNum(k,shown)}</b> for this stat: the same sources without the base value${ch.fac?' and the multipliers':''}.`:'';
+  const hint='';
   return`<div class="sd-head"><span class="sd-ic">${ic}</span><div class="sd-ttl"><h2 id="sd-title">${esc(k)}</h2><span class="sd-tot num">${sdNum(k,final)} total</span></div>
     <button type="button" class="icon-btn" data-sd-x aria-label="Close" title="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <section><h3 class="sd-sec">Where it comes from<small>${hi?'highest one counts':'added first'}</small></h3>

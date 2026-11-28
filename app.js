@@ -48,11 +48,12 @@ const collVec=()=>total(TT.filter(t=>TOWN.has(t.i)).map(t=>tvec(t.cb)));
    With "Include runes" on, the optimizer picks the best 3 of them */
 const RUD=DATA.runes,RU_KEY='ouwland-runes-owned',RU_OLD='ouwland-runes',RSLOTS=RUD.slots;
 const ruPct=k=>/Factor|Regen|Crit/.test(k)&&!/^Max|Block Points/.test(k);
+const RMULT=new Set(['Additional Damage Factor','Crit Damage Factor']);/* the game shows these on a rune as a multiplier (1.017x = +1.7%), so they are typed and shown that way */
 const ruRange=(k,rar)=>{const sc=RUD.rar[rar].scale,top=RUD.tops[k]*sc,low=(RUD.lows[k]??RUD.tops[k]/3)*sc;
   if(RUD.whole.includes(k)){const hi=Math.max(1,Math.round(top));return[Math.min(Math.max(Math.round(low),1),hi),hi]}
   return[Math.round(low*1000)/1000,Math.round(top*1000)/1000]};
-const ruShow=(k,x)=>ruPct(k)?Math.round(x*1000)/10:x;
-const ruNum=(k,t)=>{const v=parseFloat(t);return isNaN(v)?0:(ruPct(k)?v/100:v)};
+const ruShow=(k,x)=>RMULT.has(k)?Math.round((1+x)*1e4)/1e4:ruPct(k)?Math.round(x*1000)/10:x;
+const ruNum=(k,t)=>{const v=parseFloat(t);return isNaN(v)?0:RMULT.has(k)?Math.max(0,v-1):(ruPct(k)?v/100:v)};
 const ruOpts=r=>{const K=RUD.kinds[r.kind];return[...RUD.pool,...(K.own?[K.own]:[])].filter((k,i,a)=>I[k]!==undefined&&a.indexOf(k)===i&&k!==RUD.main&&k!==K.fixed)};
 function ruNormalize(r){const K=RUD.kinds[r.kind];if(!K.rar.includes(r.rar))r.rar=K.rar[K.rar.length-1];
   const n=RUD.rar[r.rar].lines;r.subs=r.subs.slice(0,n);while(r.subs.length<n)r.subs.push({s:'',v:''});
@@ -123,9 +124,9 @@ function metrics(T,p){
   const hp=(p.hp+g('Max Health'))*(1+g('Max Health Factor'));
   const r=g('Damage Reduction Factor'),eff=r<=.4?r:.4+.2*(1-Math.exp(-(r-.4)/.2));
   let s=g('Movement Speed Factor');if(s>.25)s=.25+(s-.25)*.4;
-  return{hit,crit:hit*m,exp:hit*(1+cp*(m-1)),hp,def:hp/Math.exp(p.hs.reduce((a,h)=>a+Math.log(Math.max(1,h-g('Damage Reduction'))*(1-eff)),0)/p.hs.length),sta:g('Max Stamina'),spd:1+Math.min(s,.4),cp,m}}
+  return{hit,crit:hit*m,exp:hit*(1+cp*(m-1)),hp,def:hp/Math.exp(p.hs.reduce((a,h)=>a+Math.log(Math.max(1,h-g('Damage Reduction'))*(1-eff)),0)/p.hs.length),sta:p.sta+g('Max Stamina'),bp:p.bp+g('Block Points'),spd:1+Math.min(s,.4),cp,m}}
 function hitSizes(){const lo=Math.max(1,nz('dlo',5)),hi=Math.max(lo,nz('dhi',500)),n=9;return Array.from({length:n},(_,i)=>lo*Math.pow(hi/lo,i/(n-1)))}
-function params(){const a=skBase();return{hs:hitSizes(),base:a.base,cc:a.cc,cb:a.cb,hp:a.hp,goal:$('goal').value,
+function params(){const a=skBase();return{hs:hitSizes(),base:a.base,cc:a.cc,cb:a.cb,hp:a.hp,sta:TREE.base.sta,bp:TREE.base.block,goal:$('goal').value,
   w:ST.map(k=>Math.max(0,parseFloat(document.querySelector(`[data-w="${k}"]`).value)||0))}}
 function scorer(p){return p.goal==='custom'?T=>T.reduce((a,x,d)=>a+x*p.w[d],0):T=>metrics(T,p)[p.goal]}
 function solve(C,f,S,oneCat,fs,base,TQ,lb,RQ){
@@ -266,9 +267,9 @@ function run(){
     dd=(x,y)=>emp||Math.abs(x-y)<5e-3?'':dl((x>y?'+':'')+n2(x-y,2),x>y?'up':'dn'),
     dmg=[['Hit damage','hit'],['Crit hit damage','crit'],['Damage per hit (with crits)','exp']].map(([l,k])=>li(l,n2(mT[k],2),dd(mT[k],mC[k]),p.goal===k)).join('')
       +(wch&&msLv(wch.n)?li('Weapon mastery',esc(MASTERY.of[wch.n])+' '+msLv(wch.n)+' · ×'+n2(mmT,2),'',false):'');
-  /* Stat totals show what the game shows. Max Health, Additional Damage, Crit Chance and Crit Damage Factor are the final values (base and multipliers included, as in metrics());
+  /* Stat totals show what the game shows. Max Health, Max Stamina, Block Points, Crit Chance and Crit Damage Factor are the final values (base and multipliers included, as in metrics());
      every other stat is the plain total of its sources. Changes against the current loadout are in the same units. */
-  const FIN=M=>({'Max Health':M.hp,'Additional Damage':M.hit,'Crit Chance':M.cp,'Crit Damage Factor':M.m-1}),
+  const FIN=M=>({'Max Health':M.hp,'Max Stamina':M.sta,'Block Points':M.bp,'Crit Chance':M.cp,'Crit Damage Factor':M.m-1}),
     fpct=k=>k==='Crit Chance'||k==='Crit Damage Factor',
     fv=(k,d,A,M)=>k in FIN(M)?(fpct(k)?fmt(k,FIN(M)[k]):n2(FIN(M)[k],2)):fmt(k,A[d]),
     fdl=(k,d,A,C,M,MC)=>{if(emp)return'';const fin=k in FIN(M),x=fin?FIN(M)[k]:A[d],y=fin?FIN(MC)[k]:C[d],t=x-y;
@@ -525,7 +526,7 @@ $('ru-cat').addEventListener('click',e=>{if(e.target.closest('#ru-add')){rdOpen(
 /* the window: RD = {id: the rune's id, or '' while adding, r: a working copy that is only kept on Save} */
 const rdlg=$('rune-dlg');let RD=null;
 function rdRow(k,val,f,j,ops){
-  const nm=`<span class="sr-ic">${k?siImg(k):''}</span><span class="sr-nm">${k?esc(k)+(ruPct(k)?' (%)':''):'Pick a substat'}</span>`,
+  const nm=`<span class="sr-ic">${k?siImg(k):''}</span><span class="sr-nm">${k?esc(k)+(RMULT.has(k)?' (x)':ruPct(k)?' (%)':''):'Pick a substat'}</span>`,
     left=ops?`<label class="sr-n sel${k?'':' empty'}">${nm}<svg class="sr-cv" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg><select data-rd="ss" data-j="${j}" aria-label="Substat ${j+1}"><option value="">None</option>${ops.map(o=>`<option value="${attr(o)}"${o===k?' selected':''}>${esc(o)}</option>`).join('')}</select></label>`:`<div class="sr-n">${nm}</div>`;
   return`<div class="sr">${left}<input type="number" step="any" min="0" inputmode="decimal" value="${attr(val)}" placeholder="${k?ruRg(k,RD.r.rar):''}" aria-label="${attr(k||'Substat')} value" ${k?'':'disabled '}data-rd="${f}"${j===undefined?'':` data-j="${j}"`}></div>`}
 function rdRender(){
@@ -560,12 +561,12 @@ $('runes-on').addEventListener('change',()=>{RU_ON=$('runes-on').checked;ruSave(
 const setDlg=$('settings');
 /* Stat totals: click a stat to see where its number comes from (modelled on the game's own stat tooltip).
    Sources are read from the same pieces run() added up (skill tree, clan, Progress, gear, weapon, titles, runes), so the rows always add up to the number in the list.
-   Max Health, Additional Damage, Crit Chance and Crit Damage Factor also get their base value, and the first two their multipliers, like the game shows. */
+   Max Health, Max Stamina, Block Points and Crit Chance also get their base value, and Max Health its multiplier, like the game shows. Additional Damage and Crit Damage Factor have no base and no multiplier step. */
 const sdlg=$('stat-dlg');
 const CHAIN={'Max Health':{base:()=>TREE.base.hp,fac:'Max Health Factor'},
-  'Additional Damage':{base:()=>TREE.base.hit,fac:'Additional Damage Factor',mast:1},
-  'Crit Chance':{base:()=>TREE.base.crit,cap:1},
-  'Crit Damage Factor':{base:()=>TREE.base.critBonus}};
+  'Max Stamina':{base:()=>TREE.base.sta},
+  'Block Points':{base:()=>TREE.base.block},
+  'Crit Chance':{base:()=>TREE.base.crit,cap:1}};
 const sdPct=k=>fmt(k,1).slice(-1)==='%';
 const sdNum=(k,v,sign)=>{if(BOOL.has(k))return'Yes';if(sdPct(k))return fmt(k,v);const x=n2(v,2);return sign&&v>0?'+'+x:x};
 function sdRows(k){

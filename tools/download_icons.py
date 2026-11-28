@@ -1,4 +1,4 @@
-"""Download every icon listed in data.js (items, stats) and tree.js (Skill Tree nodes) into ./icons/<id>.png.
+"""Download every icon listed in data.js (items, stats, runes) and tree.js (Skill Tree nodes) into ./icons/<id>.png.
 
 Run from anywhere:  python tools/download_icons.py
 Uses only the Python standard library. Safe to rerun: icons you already have are skipped.
@@ -128,10 +128,11 @@ def main():
     tree = load_const(TREE_JS, "TREE") or {"b": []}
     ids = sorted({str(i["ic"]) for i in data["items"] if i.get("ic")}
                  | {str(v) for v in data.get("si", {}).values()}
+                 | {str(k["ic"]) for k in data.get("runes", {}).get("kinds", {}).values() if k.get("ic")}
                  | {str(b["ic"]) for b in tree["b"] if b.get("ic")})
     os.makedirs(ICON_DIR, exist_ok=True)
     todo = [i for i in ids if not os.path.exists(os.path.join(ICON_DIR, f"{i}.png"))]
-    print(f"{len(ids)} icons in data.js + tree.js, {len(todo)} to download")
+    print(f"{len(ids)} icons in data.js (items, stats, runes) + tree.js, {len(todo)} to download")
     if not todo:
         print("Nothing to do.")
         return 0

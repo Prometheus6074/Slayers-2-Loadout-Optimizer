@@ -181,21 +181,12 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 .lo-edit{flex:1;min-width:0;border:0;background:transparent;border-radius:8px;padding:10px 12px;font-weight:600}
 .lo-edit:focus-visible{outline-offset:-2px}
 
-/* runes panel */
-.ru{display:grid;gap:10px}
-.ru h2{font-size:18px;margin:0}
-.ru-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-#ru-body{display:grid;gap:10px}
-.ru-card{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}
-.ru-card h3{margin:0;font-size:14px}
-.ru-card select,.ru-card input[type=number]{background:var(--panel)}
-.ru-sub{display:grid;grid-template-columns:3fr 2fr;gap:8px;align-items:end}
 /* settings cog + modal */
 .ctl-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;color:var(--mute);background:var(--soft);border:1px solid var(--line);border-radius:8px;cursor:pointer}
 .icon-btn:hover{color:var(--ink);border-color:var(--acc)}
-dialog#settings{width:min(440px,calc(100vw - 24px));max-height:calc(100vh - 32px);padding:0;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.45);overflow:auto}
-dialog#settings::backdrop{background:rgba(8,9,16,.6)}
+dialog#settings,dialog#rune-dlg{width:min(440px,calc(100vw - 24px));max-height:calc(100vh - 32px);padding:0;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.45);overflow:auto}
+dialog#settings::backdrop,dialog#rune-dlg::backdrop{background:rgba(8,9,16,.6)}
 .dlg{display:grid;gap:16px;padding:18px}
 .dlg-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .dlg-head h2{font-size:20px}
@@ -257,3 +248,45 @@ dialog#settings::backdrop{background:rgba(8,9,16,.6)}
 @container (max-width:795px){.tw-row.n3{display:block}.tw-row.n3 .tw-t .slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
 @container (max-width:593px){.tw-row.n2{display:block}.tw-row.n2 .tw-t .slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
 @container (max-width:391px){.tw-row.n1{display:block}.tw-row.n1 .tw-t .slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
+
+/* runes on My items */
+.rt .d-st{width:100%;margin-top:4px;text-align:left;font-size:12px;gap:4px}
+.rt .d-st li{flex-wrap:wrap;gap:0 6px}
+.rt .si{width:18px;height:18px}
+#ru-cat .empty{padding:20px}
+/* rune window */
+dialog#rune-dlg{width:min(500px,calc(100vw - 24px))}
+.rd-top{display:flex;align-items:center;gap:14px}
+.rd-pic{flex:none;width:72px;height:72px;display:grid;place-items:center;border-radius:12px;border:2px solid var(--rc);box-shadow:0 8px 20px -10px var(--rc);
+ background:linear-gradient(165deg,color-mix(in srgb,var(--rc) 30%,var(--panel)),var(--panel) 80%)}
+.rd-pic .ic{width:100%;height:100%;object-fit:contain}
+.rd-id{display:grid;gap:2px;min-width:0}
+.rd-nm{font:700 20px/1.2 "IBM Plex Sans",system-ui,sans-serif;color:color-mix(in srgb,var(--rc) 60%,var(--ink))}
+.rd-kinds{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.rd-k{display:grid;justify-items:center;gap:4px;padding:8px 4px;font:inherit;font-size:12px;color:var(--ink);background:var(--soft);border:2px solid transparent;border-radius:10px;cursor:pointer}
+.rd-k:hover{border-color:var(--line)}
+.rd-k.on{border-color:var(--rc);background:color-mix(in srgb,var(--rc) 14%,var(--soft))}
+.rd-kp{width:44px;height:44px;display:grid;place-items:center}
+.rd-kp .ic{width:100%;height:100%;object-fit:contain}
+.rd-rar{display:flex;flex-wrap:wrap;gap:8px}
+.rd-r{font:inherit;font-size:13px;font-weight:600;color:var(--ink);background:var(--soft);border:2px solid color-mix(in srgb,var(--rc) 55%,var(--line));border-radius:99px;padding:5px 14px;cursor:pointer}
+.rd-r:hover{border-color:var(--rc)}
+.rd-r.on{background:color-mix(in srgb,var(--rc) 35%,var(--soft));border-color:var(--rc)}
+/* stat rows: icon + name on the left (a drop-down for substats), the value on the right */
+.sr-list{display:grid;gap:8px}
+.sr{display:flex;align-items:stretch;overflow:hidden;border-radius:6px;background:var(--soft);border:1px solid var(--line)}
+.sr-n{position:relative;display:flex;align-items:center;gap:8px;flex:0 0 58%;min-width:0;min-height:42px;padding:0 10px;background:#4f9d4c;color:#fff;font-size:14px;font-weight:600}
+.sr-n.empty{background:color-mix(in srgb,var(--mute) 50%,var(--panel))}
+.sr-ic{display:inline-grid;width:22px;height:22px;flex:none}
+.sr-ic img{width:100%;height:100%;object-fit:contain}
+.sr-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr-cv{flex:none}
+.sr-n select{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;opacity:0;cursor:pointer}
+.sr input[type=number]{flex:1;min-width:0;width:auto;border:0;border-radius:0;background:transparent;text-align:right;font-size:16px;font-weight:700;padding:0 12px}
+.sr input[type=number]::placeholder{color:var(--mute);font-size:13px;font-weight:400}
+.sr input[type=number]:disabled{opacity:.5}
+.sr:focus-within{border-color:var(--acc)}
+.sr input[type=number]:focus-visible{outline:0}
+.rd-foot{display:flex;align-items:center;gap:8px}
+.rd-foot .sp{flex:1}
+.btn.del{color:var(--bad)}

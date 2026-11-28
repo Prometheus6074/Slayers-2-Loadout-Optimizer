@@ -40,11 +40,6 @@
 <div class="lo-tabs" id="lo-tabs" role="group" aria-label="Loadouts"></div>
 <button type="button" class="lo-add" id="lo-add"><span aria-hidden="true">+</span> Add a loadout</button>
 </section>
-<section class="panel ru" id="ru-bar" aria-label="Runes">
-<h2>Runes</h2>
-<div class="ru-top"><label class="row"><input type="checkbox" id="runes-on">Include runes (3 slots)</label><button type="button" class="btn hide" id="ru-clear">Clear</button></div>
-<div id="ru-body" class="hide"></div>
-</section>
 </div>
 <main>
 <div id="o-body"><div class="panel" id="out"></div>
@@ -60,7 +55,8 @@
 <span class="cat-btns"><button type="button" class="btn" id="pg-all">Tick all shown</button><button type="button" class="btn" id="pg-none">Untick all shown</button><button type="button" class="btn" id="pg-reset">Reset to save</button><button type="button" class="btn hide" id="pg-exclear">Clear exclusions</button></span></div>
 <div class="chips" id="pg-chips" style="margin-top:12px" role="group" aria-label="Jump to category"></div>
 </div>
-<div id="i-body"><div><div id="items-cats" style="display:grid;gap:16px"></div>
+<div id="i-body"><div style="display:grid;gap:16px"><div id="items-cats" style="display:grid;gap:16px"></div>
+<section class="cat hide" id="ru-cat" data-c="Runes" aria-label="Runes"></section>
 <div class="empty hide" id="pg-empty">No items match that search.</div></div>
 <aside class="panel detail hide" id="i-detail" aria-label="Item details"></aside></div>
 </div>
@@ -71,6 +67,9 @@
 <fieldset><legend>Rules</legend>
 <label class="row"><input type="checkbox" id="onecat" checked>One item per category</label>
 <label class="row"><input type="checkbox" id="owned">Only items I own</label>
+</fieldset>
+<fieldset><legend>Runes</legend>
+<label class="row"><input type="checkbox" id="runes-on">Include runes (3 slots, from My items)</label>
 </fieldset>
 <fieldset><legend>Titles</legend>
 <label class="row"><input type="checkbox" id="tit" checked>Include titles (3 boost slots)</label>
@@ -89,6 +88,7 @@
 <div class="dlg-foot"><button type="button" class="btn pri" data-dlg-close>Done</button></div>
 </div>
 </dialog>
+<dialog id="rune-dlg" aria-labelledby="rd-title"><div class="dlg" id="rd-body"></div></dialog>
 <script src="data.js"></script>
 <script src="tree.js"></script>
 <script src="app.js"></script>

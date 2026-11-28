@@ -611,5 +611,17 @@ $('o-res').addEventListener('click',e=>{const r=e.target.closest('[data-stat]');
 $('o-res').addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const r=e.target.closest('[data-stat]');if(r){e.preventDefault();sdOpen(r.dataset.stat)}});
 sdlg.addEventListener('click',e=>{if(e.target===sdlg||e.target.closest('[data-sd-x]'))sdlg.close()});
 $('set-btn').onclick=()=>setDlg.showModal();
+/* Export: everything the person has set up, as one .json file */
+function exportData(){
+  const ids=['onecat','owned','runes-on','tit','town','lant','lcalc','wpn','wcalc'],sel=['goal','lantern','wsel'],settings={};
+  ids.forEach(i=>settings[i]=$(i).checked);sel.forEach(i=>settings[i]=$(i).value);
+  const data={app:'Slayers 2 Loadout Optimizer',exported:new Date().toISOString(),
+    settings,ownedItems:[...ownedSet].sort(),excluded:[...exSet].sort(),
+    tierRefine:Object.fromEntries(DATA.items.filter(i=>ownedSet.has(i.n)).map(i=>[i.n,trOf(i)])),
+    titlesUnlocked:[...TOWN].sort(),runes:RUNES,loadouts:LO,skillTree:SK,progress:PR,weaponMastery:MS,clan:CL};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');
+  a.href=url;a.download='slayers-2-loadout-data-'+new Date().toLocaleDateString('sv-SE')+'.json';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+$('export-json').addEventListener('click',exportData);
 setDlg.addEventListener('click',e=>{if(e.target===setDlg||e.target.closest('[data-dlg-close]'))setDlg.close()});
 syncOwn();syncEx();ruPage();renderLoBar();route();

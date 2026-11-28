@@ -144,7 +144,8 @@ const GOALS={exp:['Damage per hit (with crits)',v=>n2(v,2)],hit:['Hit damage',v=
 function run(){
   last=null;
   skSync();const p=params(),f=scorer(p);
-  for(const[id,sh]of[['f-dmg',['exp','hit','crit']],['f-hp',['hp','def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal));
+  for(const[id,sh]of[['f-dmg',['exp','hit','crit']],['f-hp',['hp','def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal)||(skAuto()&&(id==='f-dmg'||(id==='f-hp'&&p.goal!=='def'))));/* the base fields are worked out from the Skill Tree, so they only show when that is off */
+  $('l-hp').classList.toggle('hide',skAuto());
   $('f-rng').classList.toggle('hide',p.goal!=='def');
   let base0=DATA.items.filter(i=>!isW(i)),wb0=DATA.items.filter(i=>isW(i)&&(!i.rq||!DATA.race||i.rq.includes(DATA.race)));
   if($('noevt').checked){base0=base0.filter(i=>i.fl!=='unobtainable');wb0=wb0.filter(i=>i.fl!=='unobtainable')}

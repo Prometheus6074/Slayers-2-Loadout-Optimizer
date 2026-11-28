@@ -394,4 +394,8 @@ $('ru-bar').addEventListener('change',e=>{const t=e.target;
 $('ru-bar').addEventListener('input',e=>{const t=e.target;if(!t.dataset||t.dataset.ru===undefined)return;const r=RU.list[+t.dataset.ru],f=t.dataset.f;
   if(f==='hp')r.hp=t.value;else if(f==='fx')r.fx=t.value;else if(f==='sv')r.subs[+t.dataset.j].v=t.value;else return;ruSave()});
 $('ru-clear').onclick=()=>{RU.list.forEach(r=>{r.hp='';r.fx='';r.subs.forEach(x=>{x.s='';x.v=''})});ruSave();ruRender();clearTimeout(tm);tm=setTimeout(run,0)};
+/* settings modal: the rule switches live in a <dialog>; their ids and the "input" listener above are unchanged */
+const setDlg=$('settings');
+$('set-btn').onclick=()=>setDlg.showModal();
+setDlg.addEventListener('click',e=>{if(e.target===setDlg||e.target.closest('[data-dlg-close]'))setDlg.close()});
 syncOwn();syncEx();pgFilter();renderLoBar();ruRender();route();

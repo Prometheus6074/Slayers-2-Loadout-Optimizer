@@ -191,3 +191,16 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 .ru-card h3{margin:0;font-size:14px}
 .ru-card select,.ru-card input[type=number]{background:var(--panel)}
 .ru-sub{display:grid;grid-template-columns:3fr 2fr;gap:8px;align-items:end}
+/* settings cog + modal */
+.ctl-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;color:var(--mute);background:var(--soft);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.icon-btn:hover{color:var(--ink);border-color:var(--acc)}
+dialog#settings{width:min(440px,calc(100vw - 24px));max-height:calc(100vh - 32px);padding:0;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.45);overflow:auto}
+dialog#settings::backdrop{background:rgba(8,9,16,.6)}
+.dlg{display:grid;gap:16px;padding:18px}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dlg-head h2{font-size:20px}
+.dlg fieldset{gap:12px;padding-top:12px;border-top:1px solid var(--line)}
+.dlg legend{float:left;width:100%;padding:0 0 10px;font:700 12px "IBM Plex Sans",system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.dlg legend+*{clear:both}
+.dlg-foot{display:flex;justify-content:flex-end}

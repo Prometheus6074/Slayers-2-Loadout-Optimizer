@@ -95,7 +95,11 @@ skFix();
 function skStats(){const o={};TB.forEach(b=>{for(let i=0;i<SK[b.id];i++){const s=b.st[i].s;for(const k in s)o[k]=(o[k]||0)+s[k]}});for(const k in o)o[k]=R6(o[k]);return o}
 /* Progress (Slayer / Demon) and weapon mastery, both set on the Skill Tree page and starting at level 1 and 0. Progress stats add up through the level you are on;
    a Slayer gets the Slayer side, a Demon the Demon side, a Hybrid both (PlayerProgression.SidesFor). */
-const PR_KEY='ouwland-progress',MS_KEY='ouwland-mastery',PR_SIDES=PROG.race==='Hybrid'?['Slayer','Demon']:PROG.race==='Demon'?['Demon']:['Slayer'],PR_MAX=PROG.levels.length;
+const PR_KEY='ouwland-progress',MS_KEY='ouwland-mastery',PR_MAX=PROG.levels.length;
+/* race: Human gets no Progress, a Slayer the Slayer side, a Demon the Demon side, a Hybrid both. It also decides which weapons can be used */
+const RACES=['Human','Slayer','Demon','Hybrid'],RACE_KEY='ouwland-race';let RACE=RACES.includes(PROG.race)?PROG.race:'Human';
+try{const sv=JSON.parse(localStorage.getItem(RACE_KEY));if(RACES.includes(sv))RACE=sv}catch(e){}
+const raceSave=()=>{try{localStorage.setItem(RACE_KEY,JSON.stringify(RACE))}catch(e){}},prSides=()=>RACE==='Hybrid'?['Slayer','Demon']:RACE==='Demon'||RACE==='Slayer'?[RACE]:[];
 let PR={Slayer:PROG.save.Slayer,Demon:PROG.save.Demon},MS={...MASTERY.save};
 try{const sv=JSON.parse(localStorage.getItem(PR_KEY));if(sv&&typeof sv==='object')['Slayer','Demon'].forEach(s=>{if(sv[s]!==undefined)PR[s]=Math.min(PR_MAX,Math.max(1,Math.round(+sv[s])||1))})}catch(e){}
 try{const sv=JSON.parse(localStorage.getItem(MS_KEY));if(sv&&typeof sv==='object')for(const k in MS)if(sv[k]!==undefined)MS[k]=Math.min(MASTERY.max,Math.max(0,Math.round(+sv[k])||0))}catch(e){}
@@ -104,7 +108,7 @@ try{const sv=JSON.parse(localStorage.getItem(CL_KEY));if(typeof sv==='string'&&(
 const clSave=()=>{try{localStorage.setItem(CL_KEY,JSON.stringify(CL))}catch(e){}};
 const prSave=()=>{try{localStorage.setItem(PR_KEY,JSON.stringify(PR))}catch(e){}},msSave=()=>{try{localStorage.setItem(MS_KEY,JSON.stringify(MS))}catch(e){}};
 function prSide(s){const o={};for(let i=0;i<PR[s];i++){const x=PROG.levels[i][s==='Slayer'?'s':'d'];for(const k in x)o[k]=(o[k]||0)+x[k]}for(const k in o)o[k]=R6(o[k]);return o}
-function prStats(){const o={};PR_SIDES.forEach(s=>{const x=prSide(s);for(const k in x)o[k]=(o[k]||0)+x[k]});for(const k in o)o[k]=R6(o[k]);return o}
+function prStats(){const o={};prSides().forEach(s=>{const x=prSide(s);for(const k in x)o[k]=(o[k]||0)+x[k]});for(const k in o)o[k]=R6(o[k]);return o}
 function skAll(){const o=skStats(),q=prStats(),c=CL&&clBy[CL]?clBy[CL].s:{};for(const k in q)o[k]=R6((o[k]||0)+q[k]);for(const k in c)o[k]=R6((o[k]||0)+c[k]);return o}/* tree + Progress + Clan */
 /* the weapon's mastery multiplier on hit damage. The base hit here is the basic attack (M1) damage, so it uses the basic-attack multiplier 1 + level * m1 / div */
 const msLv=n=>{const m=MASTERY.of[n];return m?Math.min(MASTERY.max,Math.max(0,Math.floor(+MS[m])||0)):0};
@@ -167,7 +171,7 @@ function run(){
   const p=params(),f=scorer(p),fOf=w=>scorer({...p,mm:w?msMul(w.n):1});let F=f;/* F scores with the mastery of the weapon being tried; f (no mastery) only decides which stats matter */
   for(const[id,sh]of[['f-hp',['def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal));/* base damage / crit / HP come from the Skill Tree, so only the Defense and custom-weight fields ever show */
   $('f-rng').classList.toggle('hide',p.goal!=='def');
-  let base0=DATA.items.filter(i=>!isW(i)),wb0=DATA.items.filter(i=>isW(i)&&(!i.rq||!DATA.race||i.rq.includes(DATA.race)));
+  let base0=DATA.items.filter(i=>!isW(i)),wb0=DATA.items.filter(i=>isW(i)&&(!i.rq||i.rq.includes(RACE)));
   if(exSet.size){base0=base0.filter(i=>!exSet.has(i.n));wb0=wb0.filter(i=>!exSet.has(i.n))}
   const items=$('owned').checked?base0.filter(i=>ownedSet.has(i.n)):base0;
   let C=items.map(i=>({...i,v:itv(i)})),fi=null,L=[];
@@ -449,16 +453,18 @@ const clHtml=()=>`<section class="panel" id="cl-panel"><div class="head"><h2>Cla
 function clRefresh(){const s=document.querySelector('[data-cl]'),h=document.querySelector('[data-cls]'),c=clBy[CL];if(s.value!==CL)s.value=CL;
   h.textContent=c?Object.keys(c.s).map(k=>clAmt(k,c.s[k])).join(' · '):'No clan bonus'}
 const prHtml=()=>`<section class="panel" id="pr-panel"><div class="head"><h2>Progress</h2><span class="cat-btns"><button type="button" class="btn" id="pr-save">Reset</button></span></div>
+<div class="pr-grid"><div class="pr-side"><label>Race<select data-race>${RACES.map(r=>`<option value="${r}">${r==='Human'?'Human (no progress)':r}</option>`).join('')}</select></label></div></div>
 <div class="pr-grid">${['Slayer','Demon'].map(s=>`<div class="pr-side" data-side="${s}"><label>${s} progress<select data-pr="${s}">${PROG.levels.map((_,i)=>`<option value="${i+1}">Level ${i+1}${i===0?' (no bonus)':i===PR_MAX-1?' (final)':''}</option>`).join('')}</select></label><p class="hint" data-prs="${s}"></p></div>`).join('')}</div>
 <p class="hint" id="pr-note"></p></section>`;
 const msHtml=()=>`<section class="panel" id="ms-panel"><div class="head"><h2>Weapon mastery</h2><span class="cat-btns"><button type="button" class="btn" id="ms-save">Reset</button></span></div>
 <div class="pr-grid">${msNames.map(n=>`<label>${esc(n)}<input type="number" min="0" max="${MASTERY.max}" step="1" data-ms="${attr(n)}"><span class="hint" data-msr="${attr(n)}"></span></label>`).join('')}</div>
 <p class="hint" id="ms-note"></p></section>`;
-function prRefresh(){['Slayer','Demon'].forEach(s=>{const on=PR_SIDES.includes(s),sel=document.querySelector(`[data-pr="${s}"]`),h=document.querySelector(`[data-prs="${s}"]`);
+function prRefresh(){const rs=document.querySelector('[data-race]');if(rs.value!==RACE)rs.value=RACE;
+  ['Slayer','Demon'].forEach(s=>{const on=prSides().includes(s),sel=document.querySelector(`[data-pr="${s}"]`),h=document.querySelector(`[data-prs="${s}"]`);
     if(+sel.value!==PR[s])sel.value=PR[s];sel.disabled=!on;sel.closest('.pr-side').classList.toggle('lock',!on);
     const x=prSide(s),l=Object.keys(x).map(k=>prAmt(k,x[k]));if(s==='Slayer'&&PR[s]>=PR_MAX)l.push('Breathing Boost skill');
-    h.textContent=on?(l.join(' · ')||'No bonus yet'):'Not counted, your race is '+PROG.race});
-  $('pr-note').textContent='Bonuses add up through the level you are on. A Slayer gets the Slayer side, a Demon the Demon side, a Hybrid both.'}
+    h.textContent=on?(l.join(' · ')||'No bonus yet'):'Not counted, your race is '+RACE});
+  $('pr-note').textContent='Bonuses add up through the level you are on. A Slayer gets the Slayer side, a Demon the Demon side, a Hybrid both and a Human none. Your race also decides which weapons you can pick.'}
 function msRefresh(){msNames.forEach(n=>{const i=document.querySelector(`[data-ms="${CSS.escape(n)}"]`),r=document.querySelector(`[data-msr="${CSS.escape(n)}"]`);
     if(+i.value!==MS[n])i.value=MS[n];r.textContent='Basic ×'+n2(msBasic(MS[n]),2)+' · Skills ×'+n2(msSkill(MS[n]),2)});
   $('ms-note').textContent='Used when Include weapon is on: the chosen weapon\'s mastery multiplies hit damage. The formula comes from the game\'s Progression menu code, so it is not confirmed in combat.'}
@@ -492,9 +498,10 @@ $('tree-page').addEventListener('click',e=>{if(!e.target.closest('#sk-clear'))re
 $('tree-page').addEventListener('input',e=>{const t=e.target,d=t.dataset||{};
   if(d.pr){PR[d.pr]=Math.min(PR_MAX,Math.max(1,Math.round(+t.value)||1));prSave();skRefresh();rerun()}
   else if(t.matches('[data-cl]')){CL=t.value;clSave();skRefresh();rerun()}
+  else if(t.matches('[data-race]')&&RACES.includes(t.value)){RACE=t.value;raceSave();skRefresh();rerun()}
   else if(d.ms){MS[d.ms]=Math.min(MASTERY.max,Math.max(0,Math.floor(+t.value)||0));msSave();skRefresh();rerun()}});
 $('tree-page').addEventListener('click',e=>{
-  if(e.target.closest('#pr-save')){PR={Slayer:PROG.save.Slayer,Demon:PROG.save.Demon};prSave();skRefresh();rerun()}
+  if(e.target.closest('#pr-save')){PR={Slayer:PROG.save.Slayer,Demon:PROG.save.Demon};RACE=RACES.includes(PROG.race)?PROG.race:'Human';raceSave();prSave();skRefresh();rerun()}
   else if(e.target.closest('#cl-save')){CL=CLANS.save;clSave();skRefresh();rerun()}
   else if(e.target.closest('#ms-save')){MS={...MASTERY.save};msSave();skRefresh();rerun()}});
 /* page routing: #optimizer (default), #my-items and #skill-tree */
@@ -618,7 +625,7 @@ function exportData(){
   const data={app:'Slayers 2 Loadout Optimizer',exported:new Date().toISOString(),
     settings,ownedItems:[...ownedSet].sort(),excluded:[...exSet].sort(),
     tierRefine:Object.fromEntries(DATA.items.filter(i=>ownedSet.has(i.n)).map(i=>[i.n,trOf(i)])),
-    titlesUnlocked:[...TOWN].sort(),runes:RUNES,loadouts:LO,skillTree:SK,progress:PR,weaponMastery:MS,clan:CL};
+    titlesUnlocked:[...TOWN].sort(),runes:RUNES,loadouts:LO,skillTree:SK,progress:PR,weaponMastery:MS,clan:CL,race:RACE};
   const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');
   a.href=url;a.download='slayers-2-loadout-data-'+new Date().toLocaleDateString('sv-SE')+'.json';
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
@@ -640,6 +647,7 @@ function importData(txt){
   const pr=obj(d.progress);if(pr)put.push([PR_KEY,pr]);
   const ms=obj(d.weaponMastery);if(ms)put.push([MS_KEY,ms]);
   if(typeof d.clan==='string')put.push([CL_KEY,d.clan]);
+  if(RACES.includes(d.race))put.push([RACE_KEY,d.race]);
   if(!put.length)return alert('That file has no data this site can use.');
   if(!confirm("Import replaces the data saved in this browser with the file's. Continue?"))return;
   try{put.forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));

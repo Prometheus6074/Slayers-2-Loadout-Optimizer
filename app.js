@@ -157,6 +157,9 @@ function solve(C,f,S,oneCat,fs,base,TQ,lb,RQ){
   })(0,total(fs?[base,fs.v]:[base]));
   return{set:bs,cut}}
 const fmt=(k,v)=>{if(BOOL.has(k))return'Yes';if(/Factor|Regen|Crit/.test(k)&&!/^Max(?! Health Factor)|Block Points/.test(k)){const x=Math.round(v*1000)/10;return(x>0?'+':'')+x+'%'}return String(Math.round(v*100)/100)};
+/* order of the Stat totals list, the same as the game's stat screen read left to right, top to bottom; stats not listed follow in their usual order and Sun Immunity is last */
+const SORD=['Max Health','Damage Reduction','Damage Reduction Factor','Block Points','Block Regen','Additional Damage','Additional Damage Factor','Crit Chance','Crit Damage Factor','Armor Penetration Factor','Breathing Damage Factor','Max Stamina','Stamina Regen Speed','Movement Speed Factor','Run Speed Factor','Breath Duration Factor'];
+const sRank=k=>k==='Sun Immunity'?1e3:SORD.includes(k)?SORD.indexOf(k):SORD.length;
 const n2=(x,d=1)=>(Math.round(x*10**d)/10**d).toLocaleString('en',{maximumFractionDigits:d});
 const GOALS={exp:['Damage per hit (with crits)',v=>n2(v,2)],hit:['Hit damage',v=>n2(v,2)],crit:['Crit hit damage',v=>n2(v,2)],hp:['Max HP',v=>n2(v,0)],def:['Defense (hits you can take, any hit size)',v=>n2(v,2)],sta:['Max stamina',v=>n2(v,0)],spd:['Movement speed',v=>'×'+n2(v,3)],custom:['Custom score',v=>n2(v,2)]};
 function run(){
@@ -261,12 +264,7 @@ function run(){
   const li=(l,v,d,key,ic,at)=>`<li class="${key?'key':''}"${at||''}><span class="rn">${ic||''}${l}</span><span class="rv"><b class="num">${v}</b>${d}</span></li>`;
   const sd=(k,v)=>{const s=fmt(k,v);return BOOL.has(k)||/^[+-]/.test(s)?s:'+'+s};
   const TD=T.map((x,d)=>x+SKV.fd[d]),TCD=TC.map((x,d)=>x+SKV.fd[d]);/* totals shown include the tree stats that sit in the base fields */
-  /* damage readout: hit damage with the chosen weapon's mastery, against the current loadout (with its own weapon's mastery) */
-  const mmT=wch?msMul(wch.n):1,curW=wOn?lo.items.map(c=>byName[c.n]).find(i=>i&&isW(i)):null,mmC=curW?msMul(curW.n):1,
-    mT=metrics(T,{...p,mm:mmT}),mC=metrics(TC,{...p,mm:mmC}),
-    dd=(x,y)=>emp||Math.abs(x-y)<5e-3?'':dl((x>y?'+':'')+n2(x-y,2),x>y?'up':'dn'),
-    dmg=[['Hit damage','hit'],['Crit hit damage','crit'],['Damage per hit (with crits)','exp']].map(([l,k])=>li(l,n2(mT[k],2),dd(mT[k],mC[k]),p.goal===k)).join('')
-      +(wch&&msLv(wch.n)?li('Weapon mastery',esc(MASTERY.of[wch.n])+' '+msLv(wch.n)+' · ×'+n2(mmT,2),'',false):'');
+  const mT=metrics(T,p),mC=metrics(TC,p);
   /* Stat totals show what the game shows. Max Health, Max Stamina, Block Points, Crit Chance and Crit Damage Factor are the final values (base and multipliers included, as in metrics());
      every other stat is the plain total of its sources. Changes against the current loadout are in the same units. */
   const FIN=M=>({'Max Health':M.hp,'Max Stamina':M.sta,'Block Points':M.bp,'Crit Chance':M.cp,'Crit Damage Factor':M.m-1}),
@@ -275,14 +273,14 @@ function run(){
     fdl=(k,d,A,C,M,MC)=>{if(emp)return'';const fin=k in FIN(M),x=fin?FIN(M)[k]:A[d],y=fin?FIN(MC)[k]:C[d],t=x-y;
       if(Math.abs(t)<(fin?(fpct(k)?5e-4:5e-3):1e-9))return'';
       const s=fin&&!fpct(k)?n2(t,2):fmt(k,t);return dl(/^[+-]/.test(s)||BOOL.has(k)?s:'+'+s,t>0?'up':'dn')};
-  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>TD[d]||(!emp&&TCD[d])).map(([k,d])=>li(esc(k),fv(k,d,TD,mT),fdl(k,d,TD,TCD,mT,mC),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`,` data-stat="${attr(k)}" role="button" tabindex="0" title="Show where this comes from"`)).join('');
+  const sr=ST.map((k,d)=>[k,d]).sort((a,b)=>sRank(a[0])-sRank(b[0])).filter(([k,d])=>TD[d]||(!emp&&TCD[d])).map(([k,d])=>li(esc(k),fv(k,d,TD,mT),fdl(k,d,TD,TCD,mT,mC),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`,` data-stat="${attr(k)}" role="button" tabindex="0" title="Show where this comes from"`)).join('');
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><button type="button" class="btn pri" id="lo-equip" title="Equip suggested set to ${attr(loName(LO.sel))}">Equip to ${esc(loName(LO.sel))}</button></div>
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots cat-grid">${set.map(card).join('')}</div>
   ${twrow}
   ${rsec}`;
-  $('o-res').innerHTML=`<h2 class="sub">Damage</h2><ul class="rs">${dmg}</ul><h2 class="sub">Stat totals</h2><p class="hint" style="margin:0 0 6px">Click a stat to see where it comes from.</p><ul class="rs">${sr}</ul>`;
-  brk={set,tis,rus,wch,tOn,mm:mmT,TD};
+  $('o-res').innerHTML=`<h2 class="sub">Stat totals</h2><p class="hint" style="margin:0 0 6px">Click a stat to see where it comes from.</p><ul class="rs">${sr}</ul>`;
+  brk={set,tis,rus,wch,tOn,TD};
   $('o-body').classList.add('has-res');syncLoBar()}
 /* the Optimizer recalculates when a field is committed (focus lost or Enter), not on every keystroke, so typing never lags */
 let tm;document.addEventListener('change',()=>{clearTimeout(tm);tm=setTimeout(run,120)});
@@ -596,9 +594,9 @@ function sdHtml(k){
   const added=hi?rows.reduce((m,r)=>Math.max(m,r.v),0):R6(rows.reduce((s,r)=>s+r.v,0));
   let final=added,mul='',note='';
   if(ch&&ch.fac){
-    const fr=sdRows(ch.fac),fs=R6(fr.reduce((s,r)=>s+r.v,0)),mm=ch.mast&&B.mm!==1?B.mm:1,mult=(1+fs)*mm;
+    const fr=sdRows(ch.fac),fs=R6(fr.reduce((s,r)=>s+r.v,0)),mult=1+fs;
     final=added*mult;
-    if(fr.length||mm!==1)mul=`<section><h3 class="sd-sec">Then multiplied</h3>${sdList(ch.fac,fr)}${mm!==1?`<ul class="sd-rows"><li><span class="sd-l">Weapon mastery<small>${esc(MASTERY.of[B.wch.n])} ${msLv(B.wch.n)}</small></span><b class="num">x${n2(mm,2)}</b><span class="sd-bar"><i style="width:100%"></i></span></li></ul>`:''}
+    if(fr.length)mul=`<section><h3 class="sd-sec">Then multiplied</h3>${sdList(ch.fac,fr)}
       <div class="sd-eq"><span class="num">${n2(added,2)} x ${n2(mult,4)}</span><b class="num">${n2(final,2)}</b></div></section>`}
   if(ch&&ch.cap&&added>ch.cap){final=ch.cap;note='Capped at '+sdNum(k,ch.cap)+'.'}
   const hint='';

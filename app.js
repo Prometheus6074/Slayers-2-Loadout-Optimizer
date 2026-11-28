@@ -273,7 +273,7 @@ function run(){
     fdl=(k,d,A,C,M,MC)=>{if(emp)return'';const fin=k in FIN(M),x=fin?FIN(M)[k]:A[d],y=fin?FIN(MC)[k]:C[d],t=x-y;
       if(Math.abs(t)<(fin?(fpct(k)?5e-4:5e-3):1e-9))return'';
       const s=fin&&!fpct(k)?n2(t,2):fmt(k,t);return dl(/^[+-]/.test(s)||BOOL.has(k)?s:'+'+s,t>0?'up':'dn')};
-  const sr=ST.map((k,d)=>[k,d]).sort((a,b)=>sRank(a[0])-sRank(b[0])).filter(([k,d])=>TD[d]||(!emp&&TCD[d])).map(([k,d])=>li(esc(k),fv(k,d,TD,mT),fdl(k,d,TD,TCD,mT,mC),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`,` data-stat="${attr(k)}" role="button" tabindex="0" title="Show where this comes from"`)).join('');
+  const sr=ST.map((k,d)=>[k,d]).sort((a,b)=>sRank(a[0])-sRank(b[0])).filter(([k,d])=>k!=='Max Health Factor'&&(TD[d]||(!emp&&TCD[d]))).map(([k,d])=>li(esc(k),fv(k,d,TD,mT),fdl(k,d,TD,TCD,mT,mC),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`,` data-stat="${attr(k)}" role="button" tabindex="0" title="Show where this comes from"`)).join('');
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><button type="button" class="btn pri" id="lo-equip" title="Equip suggested set to ${attr(loName(LO.sel))}">Equip to ${esc(loName(LO.sel))}</button></div>
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots cat-grid">${set.map(card).join('')}</div>

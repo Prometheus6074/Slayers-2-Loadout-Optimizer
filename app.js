@@ -92,16 +92,32 @@ const skOk=b=>skNeeds(b).every(q=>SK[q.id]>=q.at);
 function skFix(){for(let ch=true;ch;){ch=false;TB.forEach(b=>{if(SK[b.id]>0&&!skOk(b)){SK[b.id]=0;ch=true}})}}/* drop nodes that lost what they need; repeats because that can chain */
 skFix();
 function skStats(){const o={};TB.forEach(b=>{for(let i=0;i<SK[b.id];i++){const s=b.st[i].s;for(const k in s)o[k]=(o[k]||0)+s[k]}});for(const k in o)o[k]=R6(o[k]);return o}
+/* Progress (Slayer / Demon) and weapon mastery, both set on the Skill Tree page and starting from the save. Progress stats add up through the level you are on;
+   a Slayer gets the Slayer side, a Demon the Demon side, a Hybrid both (PlayerProgression.SidesFor). */
+const PR_KEY='ouwland-progress',MS_KEY='ouwland-mastery',PR_SIDES=PROG.race==='Hybrid'?['Slayer','Demon']:PROG.race==='Demon'?['Demon']:['Slayer'],PR_MAX=PROG.levels.length;
+let PR={Slayer:PROG.save.Slayer,Demon:PROG.save.Demon},MS={...MASTERY.save};
+try{const sv=JSON.parse(localStorage.getItem(PR_KEY));if(sv&&typeof sv==='object')['Slayer','Demon'].forEach(s=>{if(sv[s]!==undefined)PR[s]=Math.min(PR_MAX,Math.max(1,Math.round(+sv[s])||1))})}catch(e){}
+try{const sv=JSON.parse(localStorage.getItem(MS_KEY));if(sv&&typeof sv==='object')for(const k in MS)if(sv[k]!==undefined)MS[k]=Math.min(MASTERY.max,Math.max(0,Math.round(+sv[k])||0))}catch(e){}
+const CL_KEY='ouwland-clan',clBy=Object.fromEntries(CLANS.list.map(c=>[c.n,c]));let CL=CLANS.save;
+try{const sv=JSON.parse(localStorage.getItem(CL_KEY));if(typeof sv==='string'&&(sv===''||clBy[sv]))CL=sv}catch(e){}
+const clSave=()=>{try{localStorage.setItem(CL_KEY,JSON.stringify(CL))}catch(e){}};
+const prSave=()=>{try{localStorage.setItem(PR_KEY,JSON.stringify(PR))}catch(e){}},msSave=()=>{try{localStorage.setItem(MS_KEY,JSON.stringify(MS))}catch(e){}};
+function prSide(s){const o={};for(let i=0;i<PR[s];i++){const x=PROG.levels[i][s==='Slayer'?'s':'d'];for(const k in x)o[k]=(o[k]||0)+x[k]}for(const k in o)o[k]=R6(o[k]);return o}
+function prStats(){const o={};PR_SIDES.forEach(s=>{const x=prSide(s);for(const k in x)o[k]=(o[k]||0)+x[k]});for(const k in o)o[k]=R6(o[k]);return o}
+function skAll(){const o=skStats(),q=prStats(),c=CL&&clBy[CL]?clBy[CL].s:{};for(const k in q)o[k]=R6((o[k]||0)+q[k]);for(const k in c)o[k]=R6((o[k]||0)+c[k]);return o}/* tree + Progress + Clan */
+/* the weapon's mastery multiplier on hit damage. The base hit here is the basic attack (M1) damage, so it uses the basic-attack multiplier 1 + level * m1 / div */
+const msLv=n=>{const m=MASTERY.of[n];return m?Math.min(MASTERY.max,Math.max(0,Math.floor(+MS[m])||0)):0};
+const msBasic=l=>1+l*MASTERY.m1/MASTERY.div,msSkill=l=>1+l/MASTERY.div,msMul=n=>msBasic(msLv(n));
 const SKFOLD=['Additional Damage','Crit Chance','Crit Damage Factor','Max Health'];/* these four are folded into the four base fields; every other tree stat is added to each set */
-function skBase(){const o=skStats(),B0=TREE.base;
+function skBase(){const o=skAll(),B0=TREE.base;
   return{base:R6(B0.hit+(o['Additional Damage']||0)),cc:R6(B0.crit+(o['Crit Chance']||0)),cb:R6(B0.critBonus+(o['Crit Damage Factor']||0)),hp:R6(B0.hp+(o['Max Health']||0))}}
-function skVecs(){const o=skStats(),fd=new Array(D).fill(0),rv=new Array(D).fill(0);
+function skVecs(){const o=skAll(),fd=new Array(D).fill(0),rv=new Array(D).fill(0);
   for(const k in o){if(I[k]===undefined)continue;(SKFOLD.includes(k)?fd:rv)[I[k]]=o[k]}
   return{fd,rv}}
 let last=null,lastEx=null;/* the suggestion on screen, so "Equip" knows what to save */
 function metrics(T,p){
   const g=n=>T[I[n]];
-  const hit=(p.base+g('Additional Damage'))*(1+g('Additional Damage Factor'));
+  const hit=(p.base+g('Additional Damage'))*(1+g('Additional Damage Factor'))*(p.mm||1);
   const cp=Math.min(1,Math.max(0,p.cc+g('Crit Chance'))),m=1+p.cb+g('Crit Damage Factor');
   const hp=(p.hp+g('Max Health'))*(1+g('Max Health Factor'));
   const r=g('Damage Reduction Factor'),eff=r<=.4?r:.4+.2*(1-Math.exp(-(r-.4)/.2));
@@ -138,12 +154,12 @@ function solve(C,f,S,oneCat,fs,base,TQ,lb,RQ){
       if(cut)return}
   })(0,total(fs?[base,fs.v]:[base]));
   return{set:bs,cut}}
-const fmt=(k,v)=>{if(BOOL.has(k))return'Yes';if(/Factor|Regen|Crit/.test(k)&&!/^Max|Block Points/.test(k)){const x=Math.round(v*1000)/10;return(x>0?'+':'')+x+'%'}return String(Math.round(v*100)/100)};
+const fmt=(k,v)=>{if(BOOL.has(k))return'Yes';if(/Factor|Regen|Crit/.test(k)&&!/^Max(?! Health Factor)|Block Points/.test(k)){const x=Math.round(v*1000)/10;return(x>0?'+':'')+x+'%'}return String(Math.round(v*100)/100)};
 const n2=(x,d=1)=>(Math.round(x*10**d)/10**d).toLocaleString('en',{maximumFractionDigits:d});
 const GOALS={exp:['Damage per hit (with crits)',v=>n2(v,2)],hit:['Hit damage',v=>n2(v,2)],crit:['Crit hit damage',v=>n2(v,2)],hp:['Max HP',v=>n2(v,0)],def:['Defense (hits you can take, any hit size)',v=>n2(v,2)],sta:['Max stamina',v=>n2(v,0)],spd:['Movement speed',v=>'×'+n2(v,3)],custom:['Custom score',v=>n2(v,2)]};
 function run(){
   last=null;
-  const p=params(),f=scorer(p);
+  const p=params(),f=scorer(p),fOf=w=>scorer({...p,mm:w?msMul(w.n):1});let F=f;/* F scores with the mastery of the weapon being tried; f (no mastery) only decides which stats matter */
   for(const[id,sh]of[['f-hp',['def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal));/* base damage / crit / HP come from the Skill Tree, so only the Defense and custom-weight fields ever show */
   $('f-rng').classList.toggle('hide',p.goal!=='def');
   let base0=DATA.items.filter(i=>!isW(i)),wb0=DATA.items.filter(i=>isW(i)&&(!i.rq||!DATA.race||i.rq.includes(DATA.race)));
@@ -171,7 +187,7 @@ function run(){
       if(!wl.length)wsel.add(new Option('No weapon matches the filters',''));
       if(wl.some(i=>i.n===keep))wsel.value=keep}
     if(!wAuto){const x=wl.find(i=>i.n===wsel.value);fw=x?wv(x):null}}
-  const pruneW=a=>a.filter((x,i)=>!a.some((y,j)=>j!==i&&y.v.every((q,d)=>q>=x.v[d])&&(y.v.some((q,d)=>q>x.v[d])||j<i)));
+  const mw=i=>msMul(i.n),pruneW=a=>a.filter((x,i)=>!a.some((y,j)=>j!==i&&mw(y)>=mw(x)&&y.v.every((q,d)=>q>=x.v[d])&&(mw(y)>mw(x)||y.v.some((q,d)=>q>x.v[d])||j<i)));
   const tOn=$('tit').checked,rOn=$('runes-on').checked,SKV=skVecs(),BASE=total([tOn?collVec():new Array(D).fill(0),SKV.rv]);let TP=[],RP=[];
   $('l-town').classList.toggle('hide',!tOn);
   if(tOn){const own=$('town').checked;
@@ -197,20 +213,20 @@ function run(){
       tr.forEach(a=>{if(!sky.some(b=>rd.every(d=>b.v[d]>=a.v[d])))sky.push(a)});
       RP=sky}}
   /* B = what is already counted (titles, the weapon); lb = a score the search has to beat */
-  const pick=(pool,one,B,lb)=>{let r={set:null};for(let S=5;S>0&&!r.set;S--)r=solve(pool.concat(TP,RP),f,S,oc,one,B||BASE,Math.min(TSLOTS,TP.length),lb,RP.length?1:0);return r};
+  const pick=(pool,one,B,lb)=>{let r={set:null};for(let S=5;S>0&&!r.set;S--)r=solve(pool.concat(TP,RP),F,S,oc,one,B||BASE,Math.min(TSLOTS,TP.length),lb,RP.length?1:0);return r};
   const lanternSearch=(B,lb)=>{
     if(auto&&L.length){
       let res={set:null},bs=lb===undefined?-Infinity:lb,cut=false;
       for(const l of L){const one=C.find(c=>c.n===l.n);if(!one)continue;
         const r=pick(C.filter(c=>c!==one),one,B,bs>-Infinity?bs:undefined);cut=cut||r.cut;
-        if(r.set){const sc=f(total([B,...r.set.map(c=>c.v)]));if(sc>bs+1e-12){bs=sc;res=r}}}
+        if(r.set){const sc=F(total([B,...r.set.map(c=>c.v)]));if(sc>bs+1e-12){bs=sc;res=r}}}
       res.cut=cut;return res}
     return pick(C,fi,B,lb)};
   /* with a weapon: try each one (those another weapon beats on every stat are skipped) and keep the best result */
   const weaponSearch=(ws,search)=>{let res={set:null},wb=null,bs=-Infinity,cut=false;
-    ws.slice().sort((a,b)=>f(total([BASE,b.v]))-f(total([BASE,a.v]))).forEach(w=>{const B=total([BASE,w.v]),r=search(B,bs>-Infinity?bs:undefined);cut=cut||r.cut;
-      if(r.set){const sc=f(total([B,...r.set.map(c=>c.v)]));if(sc>bs+1e-12){bs=sc;res=r;wb=w}}});
-    res.cut=cut;return{res,wb}};
+    ws.slice().sort((a,b)=>fOf(b)(total([BASE,b.v]))-fOf(a)(total([BASE,a.v]))).forEach(w=>{F=fOf(w);const B=total([BASE,w.v]),r=search(B,bs>-Infinity?bs:undefined);cut=cut||r.cut;
+      if(r.set){const sc=F(total([B,...r.set.map(c=>c.v)]));if(sc>bs+1e-12){bs=sc;res=r;wb=w}}});
+    F=f;res.cut=cut;return{res,wb}};
   const wcands=wOn?(wAuto?pruneW(wl.map(wv)):(fw?[fw]:[])):[];
   let res,wch=null;
   if(wcands.length){const x=weaponSearch(wcands,lanternSearch);res=x.res;wch=x.wb}
@@ -223,7 +239,7 @@ function run(){
     ctv=tOn?lo.titles.map(i=>tById[i]).map(t=>tvec(TOWN.has(t.i)?t.b:tadd(t.b,t.cb))):[],crv=rOn?(lo.runes||[]).map(ruById).filter(Boolean).map(ruVec):[],emp=!cur.length&&!ctv.length&&!crv.length;
   const T=total([BASE,...set.map(c=>c.v),...tis.map(c=>c.v),...rus.map(c=>c.v),...(wch?[wch.v]:[])]),TC=total([BASE,...cur,...ctv,...crv]);
   const g=GOALS[p.goal];
-  const sc=f(T);
+  const sc=fOf(wch)(T);
   const qx=k=>`<label class="qx"><input type="checkbox" data-qx="${esc(k).replace(/"/g,'&quot;')}">Exclude</label>`;
   /* each card carries its own stats (stats are read at the tier and refine chosen on the left) */
   const cst=c=>{if(c.T){const t=tById[c.i];return stList(t.b)+(Object.keys(t.cb).some(k=>t.cb[k])?`<h4 class="c-lbl">Collection bonus</h4>${stList(t.cb)}`:'')}
@@ -244,12 +260,18 @@ function run(){
   const sd=(k,v)=>{const s=fmt(k,v);return BOOL.has(k)||/^[+-]/.test(s)?s:'+'+s};
   const TD=T.map((x,d)=>x+SKV.fd[d]),TCD=TC.map((x,d)=>x+SKV.fd[d]);/* totals shown include the tree stats that sit in the base fields */
   const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>TD[d]||(!emp&&TCD[d])).map(([k,d])=>li(esc(k),fmt(k,TD[d]),emp||TD[d]===TCD[d]?'':dl(sd(k,TD[d]-TCD[d]),TD[d]>TCD[d]?'up':'dn'),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`)).join('');
+  /* damage readout: hit damage with the chosen weapon's mastery, against the current loadout (with its own weapon's mastery) */
+  const mmT=wch?msMul(wch.n):1,curW=wOn?lo.items.map(c=>byName[c.n]).find(i=>i&&isW(i)):null,mmC=curW?msMul(curW.n):1,
+    mT=metrics(T,{...p,mm:mmT}),mC=metrics(TC,{...p,mm:mmC}),
+    dd=(x,y)=>emp||Math.abs(x-y)<5e-3?'':dl((x>y?'+':'')+n2(x-y,2),x>y?'up':'dn'),
+    dmg=[['Hit damage','hit'],['Crit hit damage','crit'],['Damage per hit (with crits)','exp']].map(([l,k])=>li(l,n2(mT[k],2),dd(mT[k],mC[k]),p.goal===k)).join('')
+      +(wch&&msLv(wch.n)?li('Weapon mastery',esc(MASTERY.of[wch.n])+' '+msLv(wch.n)+' · ×'+n2(mmT,2),'',false):'');
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><button type="button" class="btn pri" id="lo-equip" title="Equip suggested set to ${attr(loName(LO.sel))}">Equip to ${esc(loName(LO.sel))}</button></div>
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots cat-grid">${set.map(card).join('')}</div>
   ${twrow}
   ${rsec}`;
-  $('o-res').innerHTML=`<h2 class="sub">Stat totals</h2><ul class="rs">${sr}</ul>`;
+  $('o-res').innerHTML=`<h2 class="sub">Damage</h2><ul class="rs">${dmg}</ul><h2 class="sub">Stat totals</h2><ul class="rs">${sr}</ul>`;
   $('o-body').classList.add('has-res');syncLoBar()}
 /* the Optimizer recalculates when a field is committed (focus lost or Enter), not on every keystroke, so typing never lags */
 let tm;document.addEventListener('change',()=>{clearTimeout(tm);tm=setTimeout(run,120)});
@@ -410,11 +432,32 @@ function skCardHtml(b){
   const rng=tog?'':`<div class="tr-rng"><span class="tr-ticks" aria-hidden="true">${Array.from({length:n+1},(_,k)=>`<i style="left:${k/n*100}%"></i>`).join('')}</span><input type="range" min="0" max="${n}" step="1" value="0" data-sk="${attr(b.id)}" aria-label="${attr(b.n)} level"></div>`;
   /* the unlock requirement is its own footer, pinned to the bottom of the card */
   return`<div class="tr-card" data-b="${attr(b.id)}"><div class="tr-top">${pic}<div class="tr-bd"><div class="tr-hd"><b class="tr-t" data-t></b><span class="tr-lv num" data-lv></span>${sw}</div><p class="tr-sub" data-sub></p>${rng}</div></div><p class="tr-need" data-need></p></div>`}
+/* Progress and Weapon mastery panels on the Skill Tree page */
+const prAmt=(k,v)=>{const nm=k.replace(/ Factor$/,'');return/Factor$|Regen Speed$/.test(k)?'+'+R6(Math.round(v*1000)/10)+'% '+nm:'+'+R6(v)+' '+nm},msNames=Object.keys(MASTERY.save).sort();
+const clAmt=(k,v)=>{if(BOOL.has(k))return k;const pc=/Factor$|Regen Speed$|Regen$/.test(k)&&!/^Max/.test(k),x=pc?R6(Math.round(v*1000)/10):R6(v);return(x>0?'+':'')+x+(pc?'% ':' ')+k};
+const clHtml=()=>`<section class="panel" id="cl-panel"><div class="head"><h2>Clan</h2><span class="cat-btns"><button type="button" class="btn" id="cl-save">Reset to save</button></span></div>
+<div class="pr-grid"><div class="pr-side"><label>Clan<select data-cl><option value="">None</option>${[...new Set(CLANS.list.map(c=>c.g))].map(g=>`<optgroup label="${g}">${CLANS.list.filter(c=>c.g===g).map(c=>`<option value="${attr(c.n)}">${esc(c.n)}${c.a?' · '+esc(c.a):''}</option>`).join('')}</optgroup>`).join('')}</select></label><p class="hint" data-cls></p></div></div></section>`;
+function clRefresh(){const s=document.querySelector('[data-cl]'),h=document.querySelector('[data-cls]'),c=clBy[CL];if(s.value!==CL)s.value=CL;
+  h.textContent=c?Object.keys(c.s).map(k=>clAmt(k,c.s[k])).join(' · '):'No clan bonus'}
+const prHtml=()=>`<section class="panel" id="pr-panel"><div class="head"><h2>Progress</h2><span class="cat-btns"><button type="button" class="btn" id="pr-save">Reset to save</button></span></div>
+<div class="pr-grid">${['Slayer','Demon'].map(s=>`<div class="pr-side" data-side="${s}"><label>${s} progress<select data-pr="${s}">${PROG.levels.map((_,i)=>`<option value="${i+1}">Level ${i+1}${i===0?' (no bonus)':i===PR_MAX-1?' (final)':''}</option>`).join('')}</select></label><p class="hint" data-prs="${s}"></p></div>`).join('')}</div>
+<p class="hint" id="pr-note"></p></section>`;
+const msHtml=()=>`<section class="panel" id="ms-panel"><div class="head"><h2>Weapon mastery</h2><span class="cat-btns"><button type="button" class="btn" id="ms-save">Reset to save</button></span></div>
+<div class="pr-grid">${msNames.map(n=>`<label>${esc(n)}<input type="number" min="0" max="${MASTERY.max}" step="1" data-ms="${attr(n)}"><span class="hint" data-msr="${attr(n)}"></span></label>`).join('')}</div>
+<p class="hint" id="ms-note"></p></section>`;
+function prRefresh(){['Slayer','Demon'].forEach(s=>{const on=PR_SIDES.includes(s),sel=document.querySelector(`[data-pr="${s}"]`),h=document.querySelector(`[data-prs="${s}"]`);
+    if(+sel.value!==PR[s])sel.value=PR[s];sel.disabled=!on;sel.closest('.pr-side').classList.toggle('lock',!on);
+    const x=prSide(s),l=Object.keys(x).map(k=>prAmt(k,x[k]));if(s==='Slayer'&&PR[s]>=PR_MAX)l.push('Breathing Boost skill');
+    h.textContent=on?(l.join(' · ')||'No bonus yet'):'Not counted, your race is '+PROG.race});
+  $('pr-note').textContent='Bonuses add up through the level you are on. A Slayer gets the Slayer side, a Demon the Demon side, a Hybrid both.'}
+function msRefresh(){msNames.forEach(n=>{const i=document.querySelector(`[data-ms="${CSS.escape(n)}"]`),r=document.querySelector(`[data-msr="${CSS.escape(n)}"]`);
+    if(+i.value!==MS[n])i.value=MS[n];r.textContent='Basic ×'+n2(msBasic(MS[n]),2)+' · Skills ×'+n2(msSkill(MS[n]),2)});
+  $('ms-note').textContent='Used when Include weapon is on: the chosen weapon\'s mastery multiplies hit damage. The formula comes from the game\'s Progression menu code, so it is not confirmed in combat.'}
 function skBuild(){
   const gs=skGrps();
   $('tree-page').innerHTML=`<div class="panel"><div class="head"><h2>Skill Tree</h2><span class="cat-btns"><button type="button" class="btn" id="sk-save">Reset to save</button><button type="button" class="btn" id="sk-clear">Clear all</button></span></div>
 <ul class="tr-sum" id="sk-sum"></ul><p class="hint" id="sk-note"></p></div>`
-   +gs.map(g=>`<section class="panel"><div class="head"><h2>${esc(tBy[g].n)}</h2></div><div class="tr-grid">${TB.filter(b=>b.grp===g).map(skCardHtml).join('')}</div></section>`).join('');
+   +prHtml()+clHtml()+msHtml()+gs.map(g=>`<section class="panel"><div class="head"><h2>${esc(tBy[g].n)}</h2></div><div class="tr-grid">${TB.filter(b=>b.grp===g).map(skCardHtml).join('')}</div></section>`).join('');
   document.querySelectorAll('#tree-page .tr-card').forEach(c=>skBuilt[c.dataset.b]=c)}
 function skRefresh(){
   TB.forEach(b=>{const c=skBuilt[b.id],lv=SK[b.id],ok=skOk(b),n=b.st.length,tog=n===1&&!b.asc,inp=c.querySelector('[data-sk]');
@@ -428,7 +471,7 @@ function skRefresh(){
   const o=skBase(),sp=TB.reduce((a,b)=>a+b.st.slice(0,SK[b.id]).reduce((x,s)=>x+s.c,0),0);
   $('sk-sum').innerHTML=[['Base hit damage',R6(o.base)],['Base crit chance',R6(o.cc*100)+'%'],['Base crit bonus',R6(o.cb*100)+'%'],['Base max HP',R6(o.hp)],['Skill points spent',sp]]
     .map(([k,v])=>`<li><span>${k}</span> <b class="num">${v}</b></li>`).join('');
-  $('sk-note').textContent='The Optimizer uses these as your base stats. Character level requirements are shown but not checked.'}
+  $('sk-note').textContent='The Optimizer uses these, with Progress and Clan, as your base stats. Character level requirements are shown but not checked.';prRefresh();clRefresh();msRefresh()}
 function skRender(){if(!$('sk-sum'))skBuild();skRefresh()}
 $('tree-page').addEventListener('change',e=>e.stopPropagation());
 $('tree-page').addEventListener('input',e=>{e.stopPropagation();const t=e.target,id=t.dataset&&t.dataset.sk;if(!id)return;
@@ -437,6 +480,14 @@ $('tree-page').addEventListener('input',e=>{e.stopPropagation();const t=e.target
   skFix();skSave();skRefresh();rerun()});
 $('tree-page').addEventListener('click',e=>{const a=e.target.closest('#sk-save'),z=e.target.closest('#sk-clear');if(!a&&!z)return;
   TB.forEach(b=>SK[b.id]=a?Math.min(b.st.length,TREE.save[b.id]||0):0);skFix();skSave();skRefresh();rerun()});
+$('tree-page').addEventListener('input',e=>{const t=e.target,d=t.dataset||{};
+  if(d.pr){PR[d.pr]=Math.min(PR_MAX,Math.max(1,Math.round(+t.value)||1));prSave();skRefresh();rerun()}
+  else if(t.matches('[data-cl]')){CL=t.value;clSave();skRefresh();rerun()}
+  else if(d.ms){MS[d.ms]=Math.min(MASTERY.max,Math.max(0,Math.floor(+t.value)||0));msSave();skRefresh();rerun()}});
+$('tree-page').addEventListener('click',e=>{
+  if(e.target.closest('#pr-save')){PR={Slayer:PROG.save.Slayer,Demon:PROG.save.Demon};prSave();skRefresh();rerun()}
+  else if(e.target.closest('#cl-save')){CL=CLANS.save;clSave();skRefresh();rerun()}
+  else if(e.target.closest('#ms-save')){MS={...MASTERY.save};msSave();skRefresh();rerun()}});
 /* page routing: #optimizer (default), #my-items and #skill-tree */
 function route(){const h=location.hash,pg=h==='#my-items',tr=h==='#skill-tree',op=!pg&&!tr;view=pg?'items':tr?'tree':'opt';
   document.querySelector('.wrap').classList.toggle('hide',!op);$('items-page').classList.toggle('hide',!pg);$('tree-page').classList.toggle('hide',!tr);

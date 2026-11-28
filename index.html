@@ -52,7 +52,7 @@
 <div class="i-tools"><input type="search" id="pg-q" placeholder="Search items" aria-label="Search items"><button type="button" class="btn pri" id="pg-go">Search</button><button type="button" class="btn" id="pg-clear">Clear</button>
 <select id="pg-f" aria-label="Show"><option value="all">All items</option><option value="yes">Owned / unlocked only</option><option value="no">Not owned / locked only</option></select></div>
 <div class="i-sum" style="margin-top:12px"><span><b class="num" id="pg-total"></b> <span class="hint" id="pg-shown"></span></span>
-<span class="cat-btns"><button type="button" class="btn" id="pg-all">Tick all shown</button><button type="button" class="btn" id="pg-none">Untick all shown</button><button type="button" class="btn" id="pg-reset">Reset to save</button><button type="button" class="btn hide" id="pg-exclear">Clear exclusions</button></span></div>
+<span class="cat-btns"><button type="button" class="btn" id="pg-all">Tick all shown</button><button type="button" class="btn" id="pg-none">Untick all shown</button><button type="button" class="btn" id="pg-reset">Reset</button><button type="button" class="btn hide" id="pg-exclear">Clear exclusions</button></span></div>
 <div class="chips" id="pg-chips" style="margin-top:12px" role="group" aria-label="Jump to category"></div>
 </div>
 <div id="i-body"><div style="display:grid;gap:16px"><div id="items-cats" style="display:grid;gap:16px"></div>
@@ -86,8 +86,9 @@
 <label id="l-wsel" class="hide">Weapon<select id="wsel"></select></label>
 </fieldset>
 <fieldset><legend>Data</legend>
-<button type="button" class="btn" id="export-json">Export data (JSON)</button>
-<p class="hint">Downloads your owned items, tiers and refines, titles, runes, loadouts, skill tree, progress, mastery, clan and these settings.</p>
+<div class="row"><button type="button" class="btn" id="export-json">Export data (JSON)</button><button type="button" class="btn" id="import-json">Import data (JSON)</button></div>
+<input type="file" id="import-file" accept="application/json,.json" hidden>
+<p class="hint">Export downloads your owned items, tiers and refines, titles, runes, loadouts, skill tree, progress, mastery, clan and these settings. Import replaces the data saved in this browser with a file made by Export, then reloads the page.</p>
 </fieldset>
 <div class="dlg-foot"><button type="button" class="btn pri" data-dlg-close>Done</button></div>
 </div>

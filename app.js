@@ -23,13 +23,13 @@ function vec(it,tier,rl){
     if(!BOOL.has(k)){x*=tm;if(it.rf&&rl>0&&it.rf.st.includes(k)){const sh=it.rf.sh[k];x*=sh===undefined?1+(RM[rl]-1)/2:1+(RM[rl]-1)*sh}}
     v[I[k]]=x}
   return v}
-/* tier and refine of every item. Edited on My items. Starts from the save; items the save has no record of count as tier 3 and +7 */
+/* tier and refine of every item. Edited on My items. Every item starts at tier 1 and +0 */
 const TR_KEY='ouwland-tier-refine',isW=i=>i.k==='Toolbar';
 let trS={};
 try{const sv=JSON.parse(localStorage.getItem(TR_KEY));if(sv&&typeof sv==='object'&&!Array.isArray(sv))trS=sv}catch(e){}
 const saveTr=()=>{try{localStorage.setItem(TR_KEY,JSON.stringify(trS))}catch(e){}};
 const trOf=it=>{const s0=(DATA.tr||{})[it.n]||{},u=trS[it.n]||{};
-  return{t:it.g?Math.min(3,Math.max(1,+(u.t??s0.t??3)||3)):1,rf:it.rf?Math.min(10,Math.max(0,+(u.rf??s0.rf??7)||0)):0}};
+  return{t:it.g?Math.min(3,Math.max(1,+(u.t??s0.t??1)||1)):1,rf:it.rf?Math.min(10,Math.max(0,+(u.rf??s0.rf??0)||0)):0}};
 const itv=it=>{const r=trOf(it);return vec(it,r.t,r.rf)};
 function total(vs){const T=new Array(D).fill(0);for(const v of vs)for(let d=0;d<D;d++)T[d]=HI[d]?Math.max(T[d],v[d]):T[d]+v[d];return T}
 /* titles: 3 boost slots (their buffs) + the collection bonus of every unlocked title (always on) */
@@ -73,7 +73,7 @@ const ruById=id=>RUNES.find(r=>r.id===id);
   try{const sv=JSON.parse(localStorage.getItem(RU_OLD));if(sv&&Array.isArray(sv.list)){RU_ON=!!sv.on;
     RUNES=sv.list.filter(o=>o&&RUD.kinds[o.kind]).map(o=>ruMake({...o,id:''})).filter(r=>r.hp!==''||r.fx!==''||r.subs.some(x=>x.s&&x.v!==''));ruSave()}}catch(e){}
 })();
-/* loadouts: what is "equipped" for the comparison column. Starts as the save's current set (Loadout 1) + an empty Loadout 2 */
+/* loadouts: what is "equipped" for the comparison column. Two empty loadouts to start with */
 const LO_KEY='ouwland-loadouts';
 let LO={sel:0,list:[{name:'Loadout 1',items:DATA.cur.map(c=>({n:c.n,t:c.t,rf:c.rf})),titles:[...(DATA.curTitles||[])],runes:[]},{name:'Loadout 2',items:[],titles:[],runes:[]}]};
 try{const sv=JSON.parse(localStorage.getItem(LO_KEY));
@@ -82,7 +82,7 @@ try{const sv=JSON.parse(localStorage.getItem(LO_KEY));
       items:(l.items||[]).filter(c=>byName[c.n]).map(c=>({n:c.n,t:+c.t||1,rf:+c.rf||0})),titles:(l.titles||[]).filter(i=>tById[i]),runes:(Array.isArray(l.runes)?l.runes:[]).map(String).filter(ruById)}))}}}catch(e){}
 const saveLo=()=>{try{localStorage.setItem(LO_KEY,JSON.stringify(LO))}catch(e){}};
 const loName=i=>LO.list[i].name.trim()||'Loadout '+(i+1);
-/* skill tree (tab "Skill Tree"): the level of every node, starting from the save. A node only counts while what it hangs off is unlocked */
+/* skill tree (tab "Skill Tree"): the level of every node, starting empty. A node only counts while what it hangs off is unlocked */
 const SK_KEY='ouwland-skilltree',TB=TREE.b,tBy=Object.fromEntries(TB.map(b=>[b.id,b])),R6=x=>Math.round(x*1e6)/1e6;
 let SK={};
 TB.forEach(b=>SK[b.id]=Math.min(b.st.length,Math.max(0,+TREE.save[b.id]||0)));
@@ -93,7 +93,7 @@ const skOk=b=>skNeeds(b).every(q=>SK[q.id]>=q.at);
 function skFix(){for(let ch=true;ch;){ch=false;TB.forEach(b=>{if(SK[b.id]>0&&!skOk(b)){SK[b.id]=0;ch=true}})}}/* drop nodes that lost what they need; repeats because that can chain */
 skFix();
 function skStats(){const o={};TB.forEach(b=>{for(let i=0;i<SK[b.id];i++){const s=b.st[i].s;for(const k in s)o[k]=(o[k]||0)+s[k]}});for(const k in o)o[k]=R6(o[k]);return o}
-/* Progress (Slayer / Demon) and weapon mastery, both set on the Skill Tree page and starting from the save. Progress stats add up through the level you are on;
+/* Progress (Slayer / Demon) and weapon mastery, both set on the Skill Tree page and starting at level 1 and 0. Progress stats add up through the level you are on;
    a Slayer gets the Slayer side, a Demon the Demon side, a Hybrid both (PlayerProgression.SidesFor). */
 const PR_KEY='ouwland-progress',MS_KEY='ouwland-mastery',PR_SIDES=PROG.race==='Hybrid'?['Slayer','Demon']:PROG.race==='Demon'?['Demon']:['Slayer'],PR_MAX=PROG.levels.length;
 let PR={Slayer:PROG.save.Slayer,Demon:PROG.save.Demon},MS={...MASTERY.save};
@@ -374,7 +374,7 @@ function pgFilter(){
 function setMany(ixs,on){ixs.forEach(i=>{const e=ENT[i],set=e.T?TOWN:ownedSet,n=e.T?e.it.i:e.it.n;on?set.add(n):set.delete(n)});saveOwned();saveTown();syncOwn();rerun()}
 function setEx(ixs,on){ixs.forEach(i=>{const k=ENT[i].key;on?exSet.add(k):exSet.delete(k)});saveEx();syncEx();pgFilter();rerun()}
 function clearEx(){exSet.clear();saveEx();syncEx();pgFilter();rerun()}
-function resetOwn(){ownedSet=new Set(DATA.owned);TOWN=new Set(DATA.titlesOwned||[]);trS={};try{localStorage.removeItem(OWN_KEY);localStorage.removeItem(TOWN_KEY);localStorage.removeItem(TR_KEY)}catch(e){}if(sel>=0&&!ENT[sel].T){const r=trOf(ENT[sel].it);dT=r.t;dR=r.rf;renderDetail()}syncOwn();pgFilter();rerun()}
+function resetOwn(){if(!confirm('Clear your owned items, unlocked titles and tier / refine changes?'))return;ownedSet=new Set(DATA.owned);TOWN=new Set(DATA.titlesOwned||[]);trS={};try{localStorage.removeItem(OWN_KEY);localStorage.removeItem(TOWN_KEY);localStorage.removeItem(TR_KEY)}catch(e){}if(sel>=0&&!ENT[sel].T){const r=trOf(ENT[sel].it);dT=r.t;dR=r.rf;renderDetail()}syncOwn();pgFilter();rerun()}
 const shownIx=(rows,root)=>rows.map((r,i)=>i).filter(i=>rows[i]&&!rows[i].classList.contains('hide')&&!rows[i].closest('.cat').classList.contains('hide')&&(!root||root.contains(rows[i])));
 /* events */
 $('items-page').addEventListener('input',e=>e.stopPropagation());$('items-page').addEventListener('change',e=>e.stopPropagation());
@@ -444,14 +444,14 @@ function skCardHtml(b){
 /* Progress and Weapon mastery panels on the Skill Tree page */
 const prAmt=(k,v)=>{const nm=k.replace(/ Factor$/,'');return/Factor$|Regen Speed$/.test(k)?'+'+R6(Math.round(v*1000)/10)+'% '+nm:'+'+R6(v)+' '+nm},msNames=Object.keys(MASTERY.save).sort();
 const clAmt=(k,v)=>{if(BOOL.has(k))return k;const pc=/Factor$|Regen Speed$|Regen$/.test(k)&&!/^Max/.test(k),x=pc?R6(Math.round(v*1000)/10):R6(v);return(x>0?'+':'')+x+(pc?'% ':' ')+k};
-const clHtml=()=>`<section class="panel" id="cl-panel"><div class="head"><h2>Clan</h2><span class="cat-btns"><button type="button" class="btn" id="cl-save">Reset to save</button></span></div>
+const clHtml=()=>`<section class="panel" id="cl-panel"><div class="head"><h2>Clan</h2><span class="cat-btns"><button type="button" class="btn" id="cl-save">Reset</button></span></div>
 <div class="pr-grid"><div class="pr-side"><label>Clan<select data-cl><option value="">None</option>${[...new Set(CLANS.list.map(c=>c.g))].map(g=>`<optgroup label="${g}">${CLANS.list.filter(c=>c.g===g).map(c=>`<option value="${attr(c.n)}">${esc(c.n)}${c.a?' · '+esc(c.a):''}</option>`).join('')}</optgroup>`).join('')}</select></label><p class="hint" data-cls></p></div></div></section>`;
 function clRefresh(){const s=document.querySelector('[data-cl]'),h=document.querySelector('[data-cls]'),c=clBy[CL];if(s.value!==CL)s.value=CL;
   h.textContent=c?Object.keys(c.s).map(k=>clAmt(k,c.s[k])).join(' · '):'No clan bonus'}
-const prHtml=()=>`<section class="panel" id="pr-panel"><div class="head"><h2>Progress</h2><span class="cat-btns"><button type="button" class="btn" id="pr-save">Reset to save</button></span></div>
+const prHtml=()=>`<section class="panel" id="pr-panel"><div class="head"><h2>Progress</h2><span class="cat-btns"><button type="button" class="btn" id="pr-save">Reset</button></span></div>
 <div class="pr-grid">${['Slayer','Demon'].map(s=>`<div class="pr-side" data-side="${s}"><label>${s} progress<select data-pr="${s}">${PROG.levels.map((_,i)=>`<option value="${i+1}">Level ${i+1}${i===0?' (no bonus)':i===PR_MAX-1?' (final)':''}</option>`).join('')}</select></label><p class="hint" data-prs="${s}"></p></div>`).join('')}</div>
 <p class="hint" id="pr-note"></p></section>`;
-const msHtml=()=>`<section class="panel" id="ms-panel"><div class="head"><h2>Weapon mastery</h2><span class="cat-btns"><button type="button" class="btn" id="ms-save">Reset to save</button></span></div>
+const msHtml=()=>`<section class="panel" id="ms-panel"><div class="head"><h2>Weapon mastery</h2><span class="cat-btns"><button type="button" class="btn" id="ms-save">Reset</button></span></div>
 <div class="pr-grid">${msNames.map(n=>`<label>${esc(n)}<input type="number" min="0" max="${MASTERY.max}" step="1" data-ms="${attr(n)}"><span class="hint" data-msr="${attr(n)}"></span></label>`).join('')}</div>
 <p class="hint" id="ms-note"></p></section>`;
 function prRefresh(){['Slayer','Demon'].forEach(s=>{const on=PR_SIDES.includes(s),sel=document.querySelector(`[data-pr="${s}"]`),h=document.querySelector(`[data-prs="${s}"]`);
@@ -464,7 +464,7 @@ function msRefresh(){msNames.forEach(n=>{const i=document.querySelector(`[data-m
   $('ms-note').textContent='Used when Include weapon is on: the chosen weapon\'s mastery multiplies hit damage. The formula comes from the game\'s Progression menu code, so it is not confirmed in combat.'}
 function skBuild(){
   const gs=skGrps();
-  $('tree-page').innerHTML=`<div class="panel"><div class="head"><h2>Skill Tree</h2><span class="cat-btns"><button type="button" class="btn" id="sk-save">Reset to save</button><button type="button" class="btn" id="sk-clear">Clear all</button></span></div>
+  $('tree-page').innerHTML=`<div class="panel"><div class="head"><h2>Skill Tree</h2><span class="cat-btns"><button type="button" class="btn" id="sk-clear">Clear all</button></span></div>
 <ul class="tr-sum" id="sk-sum"></ul><p class="hint" id="sk-note"></p></div>`
    +prHtml()+clHtml()+msHtml()+gs.map(g=>`<section class="panel"><div class="head"><h2>${esc(tBy[g].n)}</h2></div><div class="tr-grid">${TB.filter(b=>b.grp===g).map(skCardHtml).join('')}</div></section>`).join('');
   document.querySelectorAll('#tree-page .tr-card').forEach(c=>skBuilt[c.dataset.b]=c)}
@@ -487,8 +487,8 @@ $('tree-page').addEventListener('input',e=>{e.stopPropagation();const t=e.target
   const b=tBy[id];let v=t.type==='checkbox'?(t.checked?1:0):+t.value;if(!skOk(b))v=0;SK[id]=v;
   if(b.asc&&v>0)TB.forEach(o=>{if(o.asc&&o!==b)SK[o.id]=0});/* only one Ascension */
   skFix();skSave();skRefresh();rerun()});
-$('tree-page').addEventListener('click',e=>{const a=e.target.closest('#sk-save'),z=e.target.closest('#sk-clear');if(!a&&!z)return;
-  TB.forEach(b=>SK[b.id]=a?Math.min(b.st.length,TREE.save[b.id]||0):0);skFix();skSave();skRefresh();rerun()});
+$('tree-page').addEventListener('click',e=>{if(!e.target.closest('#sk-clear'))return;
+  TB.forEach(b=>SK[b.id]=0);skFix();skSave();skRefresh();rerun()});
 $('tree-page').addEventListener('input',e=>{const t=e.target,d=t.dataset||{};
   if(d.pr){PR[d.pr]=Math.min(PR_MAX,Math.max(1,Math.round(+t.value)||1));prSave();skRefresh();rerun()}
   else if(t.matches('[data-cl]')){CL=t.value;clSave();skRefresh();rerun()}
@@ -623,5 +623,38 @@ function exportData(){
   a.href=url;a.download='slayers-2-loadout-data-'+new Date().toLocaleDateString('sv-SE')+'.json';
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 $('export-json').addEventListener('click',exportData);
+/* Import: reads a file made by Export, writes each section it holds into the browser's saved data, then reloads so every page starts from it.
+   Sections the file does not have are left as they are. The loaders at the top of this file still clean up anything out of range. */
+const IMP_KEY='ouwland-import-settings';
+function importData(txt){
+  let d;try{d=JSON.parse(txt)}catch(e){return alert('That file is not valid JSON.')}
+  if(!d||typeof d!=='object'||d.app!=='Slayers 2 Loadout Optimizer')return alert('That file was not made by Export on this site.');
+  const arr=x=>Array.isArray(x)?x:null,obj=x=>x&&typeof x==='object'&&!Array.isArray(x)?x:null,put=[];
+  const own=arr(d.ownedItems);if(own)put.push([OWN_KEY,own.filter(n=>byName[n])]);
+  const ex=arr(d.excluded);if(ex)put.push([EX_KEY,ex.filter(n=>typeof n==='string'&&(n.startsWith('t:')?tById[n.slice(2)]:byName[n]))]);
+  const tr=obj(d.tierRefine);if(tr){const o={};for(const n in tr)if(byName[n]&&obj(tr[n]))o[n]={t:+tr[n].t||1,rf:+tr[n].rf||0};put.push([TR_KEY,o])}
+  const tw=arr(d.titlesUnlocked);if(tw)put.push([TOWN_KEY,tw.filter(i=>tById[i])]);
+  const ru=arr(d.runes);if(ru)put.push([RU_KEY,{v:2,on:!!(obj(d.settings)&&d.settings['runes-on']),list:ru.filter(o=>o&&RUD.kinds[o.kind])}]);
+  const lo=obj(d.loadouts);if(lo&&arr(lo.list)&&lo.list.length>=2)put.push([LO_KEY,lo]);
+  const sk=obj(d.skillTree);if(sk)put.push([SK_KEY,sk]);
+  const pr=obj(d.progress);if(pr)put.push([PR_KEY,pr]);
+  const ms=obj(d.weaponMastery);if(ms)put.push([MS_KEY,ms]);
+  if(typeof d.clan==='string')put.push([CL_KEY,d.clan]);
+  if(!put.length)return alert('That file has no data this site can use.');
+  if(!confirm("Import replaces the data saved in this browser with the file's. Continue?"))return;
+  try{put.forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));
+    if(obj(d.settings))sessionStorage.setItem(IMP_KEY,JSON.stringify(d.settings))}catch(e){return alert('Could not save the imported data in this browser.')}
+  location.reload()}
+$('import-json').addEventListener('click',()=>$('import-file').click());
+$('import-file').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  const r=new FileReader();r.onload=()=>importData(String(r.result));r.onerror=()=>alert('Could not read that file.');r.readAsText(f)});
 setDlg.addEventListener('click',e=>{if(e.target===setDlg||e.target.closest('[data-dlg-close]'))setDlg.close()});
 syncOwn();syncEx();ruPage();renderLoBar();route();
+/* the checkboxes and drop-downs are not saved between visits, so an import passes them over for this one start */
+try{const s=JSON.parse(sessionStorage.getItem(IMP_KEY));sessionStorage.removeItem(IMP_KEY);
+  if(s&&typeof s==='object'){
+    ['onecat','owned','tit','town','lant','lcalc','wpn','wcalc'].forEach(i=>{if(typeof s[i]==='boolean')$(i).checked=s[i]});
+    if(typeof s.goal==='string'&&[...$('goal').options].some(o=>o.value===s.goal))$('goal').value=s.goal;
+    run();/* fills the lantern and weapon lists */
+    ['lantern','wsel'].forEach(i=>{if(typeof s[i]==='string'&&[...$(i).options].some(o=>o.value===s[i]))$(i).value=s[i]});
+    run()}}catch(e){}

@@ -115,6 +115,7 @@ function skVecs(){const o=skAll(),fd=new Array(D).fill(0),rv=new Array(D).fill(0
   for(const k in o){if(I[k]===undefined)continue;(SKFOLD.includes(k)?fd:rv)[I[k]]=o[k]}
   return{fd,rv}}
 let last=null,lastEx=null;/* the suggestion on screen, so "Equip" knows what to save */
+let brk=null;/* what the Stat totals on screen were built from, so a click on a stat can show where its number came from */
 function metrics(T,p){
   const g=n=>T[I[n]];
   const hit=(p.base+g('Additional Damage'))*(1+g('Additional Damage Factor'))*(p.mm||1);
@@ -232,7 +233,7 @@ function run(){
   if(wcands.length){const x=weaponSearch(wcands,lanternSearch);res=x.res;wch=x.wb}
   else res=lanternSearch(BASE);
   const out=$('out');
-  if(!res.set){out.innerHTML='<div class="empty">No items match these filters.</div>';$('o-res').innerHTML='';$('o-body').classList.remove('has-res');syncLoBar();return}
+  if(!res.set){out.innerHTML='<div class="empty">No items match these filters.</div>';$('o-res').innerHTML='';brk=null;$('o-body').classList.remove('has-res');syncLoBar();return}
   const set=res.set.filter(c=>!c.T&&!c.R).sort((a,b)=>a.c.localeCompare(b.c)||a.k.localeCompare(b.k)),tis=res.set.filter(c=>c.T).sort((a,b)=>a.n.localeCompare(b.n)),rus=res.set.filter(c=>c.R).flatMap(c=>c.parts).sort((a,b)=>b.r-a.r||a.n.localeCompare(b.n));
   last={set:set.slice(),tis:tis.slice(),rus:rus.slice(),wch};
   const lo=LO.list[LO.sel],cur=lo.items.filter(c=>wOn||!isW(byName[c.n])).map(c=>vec(byName[c.n],c.t,c.rf)),
@@ -256,10 +257,10 @@ function run(){
   const rsec=rOn?`<h2 class="sub">Runes</h2>${rus.length?`<div class="slots cat-grid">${rus.map(rcard).join('')}</div>`:`<p class="hint">${RUNES.length?'No rune adds anything for this goal.':'You have no runes yet. Add the ones you own on My items.'}</p>`}`:'';
   const twrow=tsec||wsec?`<div class="tw-row${tsec&&wsec&&tis.length?' side n'+tis.length:''}">${tsec}${wsec}</div>`:'';
   const dl=(t,c)=>`<em class="num ${c}">(${t})</em>`;
-  const li=(l,v,d,key,ic)=>`<li class="${key?'key':''}"><span class="rn">${ic||''}${l}</span><span class="rv"><b class="num">${v}</b>${d}</span></li>`;
+  const li=(l,v,d,key,ic,at)=>`<li class="${key?'key':''}"${at||''}><span class="rn">${ic||''}${l}</span><span class="rv"><b class="num">${v}</b>${d}</span></li>`;
   const sd=(k,v)=>{const s=fmt(k,v);return BOOL.has(k)||/^[+-]/.test(s)?s:'+'+s};
   const TD=T.map((x,d)=>x+SKV.fd[d]),TCD=TC.map((x,d)=>x+SKV.fd[d]);/* totals shown include the tree stats that sit in the base fields */
-  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>TD[d]||(!emp&&TCD[d])).map(([k,d])=>li(esc(k),fmt(k,TD[d]),emp||TD[d]===TCD[d]?'':dl(sd(k,TD[d]-TCD[d]),TD[d]>TCD[d]?'up':'dn'),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`)).join('');
+  const sr=ST.map((k,d)=>[k,d]).filter(([k,d])=>TD[d]||(!emp&&TCD[d])).map(([k,d])=>li(esc(k),fmt(k,TD[d]),emp||TD[d]===TCD[d]?'':dl(sd(k,TD[d]-TCD[d]),TD[d]>TCD[d]?'up':'dn'),false,`<span class="si">${DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:''}</span>`,` data-stat="${attr(k)}" role="button" tabindex="0" title="Show where this comes from"`)).join('');
   /* damage readout: hit damage with the chosen weapon's mastery, against the current loadout (with its own weapon's mastery) */
   const mmT=wch?msMul(wch.n):1,curW=wOn?lo.items.map(c=>byName[c.n]).find(i=>i&&isW(i)):null,mmC=curW?msMul(curW.n):1,
     mT=metrics(T,{...p,mm:mmT}),mC=metrics(TC,{...p,mm:mmC}),
@@ -271,7 +272,8 @@ function run(){
   <div class="slots cat-grid">${set.map(card).join('')}</div>
   ${twrow}
   ${rsec}`;
-  $('o-res').innerHTML=`<h2 class="sub">Damage</h2><ul class="rs">${dmg}</ul><h2 class="sub">Stat totals</h2><ul class="rs">${sr}</ul>`;
+  $('o-res').innerHTML=`<h2 class="sub">Damage</h2><ul class="rs">${dmg}</ul><h2 class="sub">Stat totals</h2><p class="hint" style="margin:0 0 6px">Click a stat to see where it comes from.</p><ul class="rs">${sr}</ul>`;
+  brk={set,tis,rus,wch,tOn,mm:mmT,TD};
   $('o-body').classList.add('has-res');syncLoBar()}
 /* the Optimizer recalculates when a field is committed (focus lost or Enter), not on every keystroke, so typing never lags */
 let tm;document.addEventListener('change',()=>{clearTimeout(tm);tm=setTimeout(run,120)});
@@ -548,6 +550,59 @@ $('runes-on').checked=RU_ON;
 $('runes-on').addEventListener('change',()=>{RU_ON=$('runes-on').checked;ruSave()});
 /* settings modal: the rule switches live in a <dialog>; their ids and the "input" listener above are unchanged */
 const setDlg=$('settings');
+/* Stat totals: click a stat to see where its number comes from (modelled on the game's own stat tooltip).
+   Sources are read from the same pieces run() added up (skill tree, clan, Progress, gear, weapon, titles, runes), so the rows always add up to the number in the list.
+   Max Health, Additional Damage, Crit Chance and Crit Damage Factor also get their base value, and the first two their multipliers, like the game shows. */
+const sdlg=$('stat-dlg');
+const CHAIN={'Max Health':{base:()=>TREE.base.hp,fac:'Max Health Factor'},
+  'Additional Damage':{base:()=>TREE.base.hit,fac:'Additional Damage Factor',mast:1},
+  'Crit Chance':{base:()=>TREE.base.crit,cap:1},
+  'Crit Damage Factor':{base:()=>TREE.base.critBonus}};
+const sdPct=k=>fmt(k,1).slice(-1)==='%';
+const sdNum=(k,v,sign)=>{if(BOOL.has(k))return'Yes';if(sdPct(k))return fmt(k,v);const x=n2(v,2);return sign&&v>0?'+'+x:x};
+function sdRows(k){
+  const d=I[k],B=brk,hi=HI[d],rows=[];
+  const agg=a=>hi?a.reduce((m,x)=>Math.max(m,x),0):R6(a.reduce((s,x)=>s+x,0));
+  const add=(l,det,v,sub)=>{if(v)rows.push({l,det:det||'',v,sub:(sub||[]).filter(x=>x.v)})};
+  const hasCl=CL&&clBy[CL];
+  add('Skill Tree','',skStats()[k]||0);
+  add('Clan',hasCl?CL:'',hasCl?(clBy[CL].s[k]||0):0);
+  add('Progress','',prStats()[k]||0);
+  const gear=B.set.map(c=>({l:c.n,v:c.v[d]}));
+  add('Gear',B.set.length+(B.set.length===1?' piece':' pieces'),agg(gear.map(x=>x.v)),gear);
+  if(B.wch)add('Weapon',B.wch.n,B.wch.v[d]);
+  const coll=B.tOn?TT.filter(t=>TOWN.has(t.i)):[],cv=agg(coll.map(t=>t.cb[k]||0)),boosts=B.tis.map(c=>({l:c.n,v:c.v[d]}));
+  add('Titles','',agg([cv,...boosts.map(x=>x.v)]),[{l:'Collection bonus ('+coll.length+' unlocked)',v:cv},...boosts]);
+  const runes=B.rus.map(c=>({l:c.n,v:c.v[d]}));
+  add('Runes','',agg(runes.map(x=>x.v)),runes);
+  return rows}
+function sdList(k,rows,hi){
+  const mx=Math.max(1e-9,...rows.map(r=>Math.abs(r.v)));
+  return`<ul class="sd-rows">${rows.map(r=>`<li><span class="sd-l">${esc(r.l)}${r.det?`<small>${esc(r.det)}</small>`:''}</span><b class="num">${sdNum(k,r.v,1)}</b><span class="sd-bar"><i style="width:${Math.max(3,Math.round(Math.abs(r.v)/mx*100))}%"></i></span></li>`
+    +r.sub.map(s=>`<li class="sd-sub"><span>${esc(s.l)}</span><b class="num">${sdNum(k,s.v,1)}</b><span></span></li>`).join('')).join('')}</ul>`}
+function sdHtml(k){
+  const d=I[k],B=brk,ch=CHAIN[k],hi=HI[d],ic=DATA.si&&DATA.si[k]?`<img src="icons/${DATA.si[k]}.png" alt="" onerror="this.remove()">`:'';
+  let rows=sdRows(k);const baseV=ch?ch.base():0;
+  if(baseV)rows=[{l:'Base',det:'',v:baseV,sub:[]},...rows];
+  const added=hi?rows.reduce((m,r)=>Math.max(m,r.v),0):R6(rows.reduce((s,r)=>s+r.v,0));
+  let final=added,mul='',note='';
+  if(ch&&ch.fac){
+    const fr=sdRows(ch.fac),fs=R6(fr.reduce((s,r)=>s+r.v,0)),mm=ch.mast&&B.mm!==1?B.mm:1,mult=(1+fs)*mm;
+    final=added*mult;
+    if(fr.length||mm!==1)mul=`<section><h3 class="sd-sec">Then multiplied</h3>${sdList(ch.fac,fr)}${mm!==1?`<ul class="sd-rows"><li><span class="sd-l">Weapon mastery<small>${esc(MASTERY.of[B.wch.n])} ${msLv(B.wch.n)}</small></span><b class="num">x${n2(mm,2)}</b><span class="sd-bar"><i style="width:100%"></i></span></li></ul>`:''}
+      <div class="sd-eq"><span class="num">${n2(added,2)} x ${n2(mult,4)}</span><b class="num">${n2(final,2)}</b></div></section>`}
+  if(ch&&ch.cap&&added>ch.cap){final=ch.cap;note='Capped at '+sdNum(k,ch.cap)+'.'}
+  const shown=B.TD[d],hint=ch&&(baseV||ch.fac)?`Stat Totals lists <b>${sdNum(k,shown)}</b> for this stat: the same sources without the base value${ch.fac?' and the multipliers':''}.`:'';
+  return`<div class="sd-head"><span class="sd-ic">${ic}</span><div class="sd-ttl"><h2 id="sd-title">${esc(k)}</h2><span class="sd-tot num">${sdNum(k,final)} total</span></div>
+    <button type="button" class="icon-btn" data-sd-x aria-label="Close" title="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <section><h3 class="sd-sec">Where it comes from<small>${hi?'highest one counts':'added first'}</small></h3>
+    ${rows.length?sdList(k,rows):'<p class="hint">Nothing in the suggested set gives this stat.</p>'}
+    <div class="sd-sum"><span>${hi?'Highest':'Added up'}</span><b class="num">${sdNum(k,added)}</b></div></section>
+    ${mul}${note?`<p class="sd-note">${note}</p>`:''}${hint?`<p class="sd-note">${hint}</p>`:''}`}
+function sdOpen(k){if(!brk||I[k]===undefined)return;$('sd-body').innerHTML=sdHtml(k);sdlg.showModal()}
+$('o-res').addEventListener('click',e=>{const r=e.target.closest('[data-stat]');if(r)sdOpen(r.dataset.stat)});
+$('o-res').addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const r=e.target.closest('[data-stat]');if(r){e.preventDefault();sdOpen(r.dataset.stat)}});
+sdlg.addEventListener('click',e=>{if(e.target===sdlg||e.target.closest('[data-sd-x]'))sdlg.close()});
 $('set-btn').onclick=()=>setDlg.showModal();
 setDlg.addEventListener('click',e=>{if(e.target===setDlg||e.target.closest('[data-dlg-close]'))setDlg.close()});
 syncOwn();syncEx();ruPage();renderLoBar();route();

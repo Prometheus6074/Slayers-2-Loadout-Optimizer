@@ -209,7 +209,8 @@ dialog#settings::backdrop{background:rgba(8,9,16,.6)}
 .tr-sum{display:flex;flex-wrap:wrap;gap:6px 24px;margin:0 0 8px;padding:0;list-style:none;font-size:14px}
 .tr-sum span{color:var(--mute)}
 .tr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
-.tr-card{display:flex;gap:12px;align-items:flex-start;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:12px}
+.tr-card{display:flex;flex-direction:column;gap:10px;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:12px}
+.tr-top{display:flex;gap:12px;align-items:flex-start;flex:1}
 .tr-card.on{border-color:var(--acc)}
 .tr-card.lock{opacity:.6}
 .tr-pic{position:relative;flex:none;width:54px;height:54px;display:grid;place-items:center;border-radius:10px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
@@ -217,15 +218,31 @@ dialog#settings::backdrop{background:rgba(8,9,16,.6)}
 .tr-pic .tr-ic{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .tr-card:not(.on) .tr-ic{filter:grayscale(.85)}
 .tr-bd{flex:1;min-width:0;display:grid;gap:6px}
-.tr-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tr-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:24px}
 .tr-t{font-weight:600;line-height:1.25;overflow-wrap:anywhere}
 .tr-lv{flex:none;font-size:12px;color:var(--mute)}
+.tr-lv:empty{display:none}
 .tr-sub,.tr-need{margin:0;font-size:12px;color:var(--mute)}
+.tr-need{margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
 .tr-need:empty{display:none}
 .tr-need .no{color:var(--bad)}
 .tr-need .yes{color:var(--good)}
-.tr-card input[type=range]{width:100%;margin:0;accent-color:var(--acc)}
-.tr-sw{font-size:13px;color:var(--mute)}
+ /* step slider: thin grey line, thin vertical marks for the steps, round thumb. The marks sit inside an inset equal to half the thumb so they line up with where the thumb stops */
+.tr-rng{--th:14px;--ln:color-mix(in srgb,var(--mute) 55%,transparent);position:relative;height:22px;margin-top:2px}
+.tr-ticks{position:absolute;left:calc(var(--th)/2);right:calc(var(--th)/2);top:50%;height:12px;transform:translateY(-50%);pointer-events:none}
+.tr-ticks i{position:absolute;top:0;bottom:0;width:1px;margin-left:-.5px;background:var(--ln)}
+.tr-card input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;background:transparent;border:0;-webkit-appearance:none;appearance:none;cursor:pointer}
+.tr-card input[type=range]:disabled{cursor:not-allowed}
+.tr-card input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--ln);border:0;border-radius:2px}
+.tr-card input[type=range]::-moz-range-track{height:2px;background:var(--ln);border:0;border-radius:2px}
+.tr-card input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:var(--th);height:var(--th);margin-top:-6px;border:0;border-radius:50%;background:var(--acc)}
+.tr-card input[type=range]::-moz-range-thumb{width:var(--th);height:var(--th);border:0;border-radius:50%;background:var(--acc)}
+.tr-card input[type=range]:disabled::-webkit-slider-thumb{background:var(--mute)}
+.tr-card input[type=range]:disabled::-moz-range-thumb{background:var(--mute)}
+.tr-card input[type=range]:focus-visible{outline:0}
+.tr-card input[type=range]:focus-visible::-webkit-slider-thumb{outline:2px solid var(--acc);outline-offset:2px}
+.tr-card input[type=range]:focus-visible::-moz-range-thumb{outline:2px solid var(--acc);outline-offset:2px}
+.tr-sw{flex:none;font-size:13px;color:var(--mute)}
 
 /* optimizer: the Titles (up to 3 cards) and the Weapon (1 card) share one row to save height.
    The row uses the same column width as the item cards above, so everything lines up. #out is a size container so the row

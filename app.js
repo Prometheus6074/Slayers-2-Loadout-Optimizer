@@ -377,10 +377,12 @@ const skAmt=(b,x)=>b.pc?'+'+R6(Math.round(x*1000)/10)+'%':'+'+R6(Math.round(x*10
 const skLvl=(b,n)=>b.st.slice(0,n).reduce((a,s)=>a+(s.s[Object.keys(b.st[0].s)[0]]||0),0);
 const skGrps=()=>[...new Set(TB.map(b=>b.grp))];
 function skCardHtml(b){
-  const tog=b.st.length===1&&!b.asc,pic=`<span class="tr-pic"><b aria-hidden="true">${esc(b.n[0])}</b>${b.ic?`<img class="tr-ic" src="icons/${b.ic}.png" alt="" loading="lazy" onload="this.previousElementSibling.remove()" onerror="this.remove()">`:''}</span>`;
-  const ctl=tog?`<label class="row tr-sw"><input type="checkbox" data-sk="${attr(b.id)}" aria-label="${attr(b.n)}"><span data-sw></span></label>`
-    :`<input type="range" min="0" max="${b.st.length}" step="1" value="0" data-sk="${attr(b.id)}" aria-label="${attr(b.n)} level">`;
-  return`<div class="tr-card" data-b="${attr(b.id)}">${pic}<div class="tr-bd"><div class="tr-hd"><b class="tr-t" data-t></b><span class="tr-lv num" data-lv></span></div><p class="tr-sub" data-sub></p>${ctl}<p class="tr-need" data-need></p></div></div>`}
+  const tog=b.st.length===1&&!b.asc,n=b.st.length,pic=`<span class="tr-pic"><b aria-hidden="true">${esc(b.n[0])}</b>${b.ic?`<img class="tr-ic" src="icons/${b.ic}.png" alt="" loading="lazy" onload="this.previousElementSibling.remove()" onerror="this.remove()">`:''}</span>`;
+  /* one-level nodes: an On/Off switch in the header row, level with the skill name. Others: a thin grey line with a thin vertical mark for every step */
+  const sw=tog?`<label class="row tr-sw"><span data-sw></span><input type="checkbox" data-sk="${attr(b.id)}" aria-label="${attr(b.n)}"></label>`:'';
+  const rng=tog?'':`<div class="tr-rng"><span class="tr-ticks" aria-hidden="true">${Array.from({length:n+1},(_,k)=>`<i style="left:${k/n*100}%"></i>`).join('')}</span><input type="range" min="0" max="${n}" step="1" value="0" data-sk="${attr(b.id)}" aria-label="${attr(b.n)} level"></div>`;
+  /* the unlock requirement is its own footer, pinned to the bottom of the card */
+  return`<div class="tr-card" data-b="${attr(b.id)}"><div class="tr-top">${pic}<div class="tr-bd"><div class="tr-hd"><b class="tr-t" data-t></b><span class="tr-lv num" data-lv></span>${sw}</div><p class="tr-sub" data-sub></p>${rng}</div></div><p class="tr-need" data-need></p></div>`}
 function skBuild(){
   const gs=skGrps();
   $('tree-page').innerHTML=`<div class="panel"><div class="head"><h2>Skill Tree</h2><span class="cat-btns"><button type="button" class="btn" id="sk-save">Reset to save</button><button type="button" class="btn" id="sk-clear">Clear all</button></span></div>

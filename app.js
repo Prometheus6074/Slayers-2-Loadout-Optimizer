@@ -87,16 +87,11 @@ function skFix(){for(let ch=true;ch;){ch=false;TB.forEach(b=>{if(SK[b.id]>0&&!sk
 skFix();
 function skStats(){const o={};TB.forEach(b=>{for(let i=0;i<SK[b.id];i++){const s=b.st[i].s;for(const k in s)o[k]=(o[k]||0)+s[k]}});for(const k in o)o[k]=R6(o[k]);return o}
 const SKFOLD=['Additional Damage','Crit Chance','Crit Damage Factor','Max Health'];/* these four are folded into the four base fields; every other tree stat is added to each set */
-const skAuto=()=>$('skauto').checked;
 function skBase(){const o=skStats(),B0=TREE.base;
   return{base:R6(B0.hit+(o['Additional Damage']||0)),cc:R6(B0.crit+(o['Crit Chance']||0)),cb:R6(B0.critBonus+(o['Crit Damage Factor']||0)),hp:R6(B0.hp+(o['Max Health']||0))}}
 function skVecs(){const o=skStats(),fd=new Array(D).fill(0),rv=new Array(D).fill(0);
-  if(skAuto())for(const k in o){if(I[k]===undefined)continue;(SKFOLD.includes(k)?fd:rv)[I[k]]=o[k]}
+  for(const k in o){if(I[k]===undefined)continue;(SKFOLD.includes(k)?fd:rv)[I[k]]=o[k]}
   return{fd,rv}}
-/* the four base fields show what the tree gives, and can't be typed in while "Calculate base stats from Skill Tree" is on */
-function skSync(){const au=skAuto(),b=skBase();
-  [['base',b.base,1],['cc',b.cc,100],['cb',b.cb,100],['hp',b.hp,1]].forEach(([id,v,m])=>{const e=$(id);e.readOnly=au;
-    e.title=au?'Worked out from your Skill Tree. Turn off "Calculate base stats from Skill Tree" in Settings to type your own.':'';if(au)e.value=R6(v*m)})}
 let last=null,lastEx=null;/* the suggestion on screen, so "Equip" knows what to save */
 function metrics(T,p){
   const g=n=>T[I[n]];
@@ -107,7 +102,7 @@ function metrics(T,p){
   let s=g('Movement Speed Factor');if(s>.25)s=.25+(s-.25)*.4;
   return{hit,crit:hit*m,exp:hit*(1+cp*(m-1)),hp,def:hp/Math.exp(p.hs.reduce((a,h)=>a+Math.log(Math.max(1,h-g('Damage Reduction'))*(1-eff)),0)/p.hs.length),sta:g('Max Stamina'),spd:1+Math.min(s,.4),cp,m}}
 function hitSizes(){const lo=Math.max(1,nz('dlo',5)),hi=Math.max(lo,nz('dhi',500)),n=9;return Array.from({length:n},(_,i)=>lo*Math.pow(hi/lo,i/(n-1)))}
-function params(){const a=skAuto()?skBase():null;return{hs:hitSizes(),base:a?a.base:nz('base',3),cc:a?a.cc:nz('cc',0)/100,cb:a?a.cb:nz('cb',50)/100,hp:a?a.hp:nz('hp',100),goal:$('goal').value,
+function params(){const a=skBase();return{hs:hitSizes(),base:a.base,cc:a.cc,cb:a.cb,hp:a.hp,goal:$('goal').value,
   w:ST.map(k=>Math.max(0,parseFloat(document.querySelector(`[data-w="${k}"]`).value)||0))}}
 function scorer(p){return p.goal==='custom'?T=>T.reduce((a,x,d)=>a+x*p.w[d],0):T=>metrics(T,p)[p.goal]}
 function solve(C,f,S,oneCat,fs,base,TQ,lb){
@@ -143,12 +138,10 @@ const n2=(x,d=1)=>(Math.round(x*10**d)/10**d).toLocaleString('en',{maximumFracti
 const GOALS={exp:['Damage per hit (with crits)',v=>n2(v,2)],hit:['Hit damage',v=>n2(v,2)],crit:['Crit hit damage',v=>n2(v,2)],hp:['Max HP',v=>n2(v,0)],def:['Defense (hits you can take, any hit size)',v=>n2(v,2)],sta:['Max stamina',v=>n2(v,0)],spd:['Movement speed',v=>'×'+n2(v,3)],custom:['Custom score',v=>n2(v,2)]};
 function run(){
   last=null;
-  skSync();const p=params(),f=scorer(p);
-  for(const[id,sh]of[['f-dmg',['exp','hit','crit']],['f-hp',['hp','def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal)||(skAuto()&&(id==='f-dmg'||(id==='f-hp'&&p.goal!=='def'))));/* the base fields are worked out from the Skill Tree, so they only show when that is off */
-  $('l-hp').classList.toggle('hide',skAuto());
+  const p=params(),f=scorer(p);
+  for(const[id,sh]of[['f-hp',['def']],['f-cus',['custom']]])$(id).classList.toggle('hide',!sh.includes(p.goal));/* base damage / crit / HP come from the Skill Tree, so only the Defense and custom-weight fields ever show */
   $('f-rng').classList.toggle('hide',p.goal!=='def');
   let base0=DATA.items.filter(i=>!isW(i)),wb0=DATA.items.filter(i=>isW(i)&&(!i.rq||!DATA.race||i.rq.includes(DATA.race)));
-  if($('noevt').checked){base0=base0.filter(i=>i.fl!=='unobtainable');wb0=wb0.filter(i=>i.fl!=='unobtainable')}
   if(exSet.size){base0=base0.filter(i=>!exSet.has(i.n));wb0=wb0.filter(i=>!exSet.has(i.n))}
   const items=$('owned').checked?base0.filter(i=>ownedSet.has(i.n)):base0;
   let C=items.map(i=>({...i,v:itv(i)})),fi=null,L=[];
@@ -212,25 +205,15 @@ function run(){
   /* each card carries its own stats (stats are read at the tier and refine chosen on the left) */
   const cst=c=>{if(c.T){const t=tById[c.i];return stList(t.b)+(Object.keys(t.cb).some(k=>t.cb[k])?`<h4 class="c-lbl">Collection bonus</h4>${stList(t.cb)}`:'')}
     const o={};ST.forEach((k,d)=>{if(c.v[d])o[k]=c.v[d]});return stList(o)};
-  const otile=(c,key,on,gain,pic)=>`<div class="row r${c.r}${on?' on':''}${pic===null?' tt':''}" style="--rc:${RC[c.r]||RC[1]}">${pic===null?'':`<span class="pic">${pic}</span>`}<span class="nm">${esc(c.n)}</span>${gain}${cst(c)}${qx(key)}</div>`;
-  /* upgrade finder: pieces of the best set you don't own yet (if \"Only items I own\" is on, search again with every item) */
-  let ups=[],upNote='';
-  if(!auto){
-    let usrc=res.set.concat(wch?[wch]:[]),full=sc;
-    if($('owned').checked){const C2=base0.map(i=>({...i,v:itv(i)})).filter(c=>!fi||c.n!==fi.n),W2=wOn?(wAuto?pruneW(wb0.map(wv)):(fw?[fw]:[])):[];
-      let r2,w2=null;
-      if(W2.length){const x=weaponSearch(W2,(B,lb)=>pick(C2,fi,B,lb));r2=x.res;w2=x.wb}else r2=pick(C2,fi);
-      if(r2.set){usrc=r2.set.concat(w2?[w2]:[]);full=f(total([BASE,...usrc.map(c=>c.v)]))}}
-    ups=usrc.filter(c=>!c.T&&!ownedSet.has(c.n)).map(c=>{const o=f(total([BASE,...usrc.filter(x=>x!==c).map(x=>x.v)]));return{...c,g:o>0?full/o-1:null}}).sort((a,b)=>(b.g||0)-(a.g||0));
-    upNote=$('owned').checked?`Your best owned set scores ${g[1](sc)}. With these items the best possible set scores ${g[1](full)} (${full>=sc?'+':''}${n2((sc?full/sc-1:0)*100,1)}%).`:'These pieces of the best set are not in your owned items yet.'}
-  const pr=o=>o?Object.keys(o).map(k=>k+' ×'+o[k]).join(', '):'';
-  const upsec=ups.length?`<h2 class="sub">Upgrades to get</h2><p class="hint">${upNote}</p><div class="slots cat-grid">${ups.map(u=>otile(u,u.n,false,u.g==null?'':`<span class="gain">${u.g>=0?'+':''}${n2(u.g*100,1)}% to best set</span>`,ico(u))).join('')}</div>`:'';
+  const otile=(c,key,on,pic)=>`<div class="row r${c.r}${on?' on':''}${pic===null?' tt':''}" style="--rc:${RC[c.r]||RC[1]}">${pic===null?'':`<span class="pic">${pic}</span>`}<span class="nm">${esc(c.n)}</span>${cst(c)}${qx(key)}</div>`;
   if(lastEx&&!exSet.has(lastEx.k))lastEx=null;
   const exNote=lastEx?`<p class="hint exnote">Excluded <b>${esc(lastEx.name)}</b> from the calculation. <button type="button" class="btn" data-undo>Undo</button></p>`:'';
-  const card=c=>otile(c,c.n,ownedSet.has(c.n),'',ico(c));
-  const tcard=c=>otile(c,'t:'+c.i,!c.lock,'',null);
-  const tsec=tOn?`<h2 class="sub">Titles</h2>${tis.length?`<div class="slots cat-grid">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}`:'';
-  const wsec=wch?`<h2 class="sub">Weapon</h2><div class="slots cat-grid">${card(wch)}</div>`:'';
+  const card=c=>otile(c,c.n,ownedSet.has(c.n),ico(c));
+  const tcard=c=>otile(c,'t:'+c.i,!c.lock,null);
+  /* Titles (3 cards) and the Weapon (1 card) sit side by side, lined up with the item grid above; they stack when the panel is too narrow (see .tw-row in style.css) */
+  const tsec=tOn?`<section class="tw-t"><h2 class="sub">Titles</h2>${tis.length?`<div class="slots cat-grid">${tis.map(tcard).join('')}</div>`:'<p class="hint">No title adds anything for this goal.</p>'}</section>`:'';
+  const wsec=wch?`<section class="tw-w"><h2 class="sub">Weapon</h2><div class="slots cat-grid">${card(wch)}</div></section>`:'';
+  const twrow=tsec||wsec?`<div class="tw-row${tsec&&wsec&&tis.length?' side n'+tis.length:''}">${tsec}${wsec}</div>`:'';
   const dl=(t,c)=>`<em class="num ${c}">(${t})</em>`;
   const li=(l,v,d,key,ic)=>`<li class="${key?'key':''}"><span class="rn">${ic||''}${l}</span><span class="rv"><b class="num">${v}</b>${d}</span></li>`;
   const sd=(k,v)=>{const s=fmt(k,v);return BOOL.has(k)||/^[+-]/.test(s)?s:'+'+s};
@@ -239,9 +222,7 @@ function run(){
   out.innerHTML=`<div class="head"><h2>Best ${set.length} for ${g[0].toLowerCase()}</h2><button type="button" class="btn pri" id="lo-equip" title="Equip suggested set to ${attr(loName(LO.sel))}">Equip to ${esc(loName(LO.sel))}</button></div>
   ${exNote}${res.cut?'<p class="warn">Search hit its time limit, so this may not be the exact best set.</p>':''}
   <div class="slots cat-grid">${set.map(card).join('')}</div>
-  ${wsec}
-  ${tsec}
-  ${upsec}`;
+  ${twrow}`;
   $('o-res').innerHTML=`<h2 class="sub">Stat totals</h2><ul class="rs">${sr}</ul>`;
   $('o-body').classList.add('has-res');syncLoBar()}
 let tm;document.addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(run,120)});
@@ -418,7 +399,7 @@ function skRefresh(){
   const o=skBase(),sp=TB.reduce((a,b)=>a+b.st.slice(0,SK[b.id]).reduce((x,s)=>x+s.c,0),0);
   $('sk-sum').innerHTML=[['Base hit damage',R6(o.base)],['Base crit chance',R6(o.cc*100)+'%'],['Base crit bonus',R6(o.cb*100)+'%'],['Base max HP',R6(o.hp)],['Skill points spent',sp]]
     .map(([k,v])=>`<li><span>${k}</span> <b class="num">${v}</b></li>`).join('');
-  $('sk-note').textContent=skAuto()?'The Optimizer uses these as your base stats. Character level requirements are shown but not checked.':'"Calculate base stats from Skill Tree" is off in Settings, so the Optimizer is using the base values you typed, not these levels.'}
+  $('sk-note').textContent='The Optimizer uses these as your base stats. Character level requirements are shown but not checked.'}
 function skRender(){if(!$('sk-sum'))skBuild();skRefresh()}
 $('tree-page').addEventListener('input',e=>{e.stopPropagation();const t=e.target,id=t.dataset&&t.dataset.sk;if(!id)return;
   const b=tBy[id];let v=t.type==='checkbox'?(t.checked?1:0):+t.value;if(!skOk(b))v=0;SK[id]=v;

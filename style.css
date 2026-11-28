@@ -132,7 +132,6 @@ input[type=radio]:checked{border-color:var(--acc);background:radial-gradient(cir
 #o-body{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
 #o-body.has-res{grid-template-columns:minmax(0,1fr) 340px}
 .slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));margin-bottom:16px}
-.cat-grid .gain{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
 @media(max-width:1180px){#o-body.has-res{grid-template-columns:1fr}#o-res{position:static;max-height:none}}
 /* titles have no picture: the name itself takes the rarity colour */
 .cat-grid .row.tt{justify-content:center;min-height:84px}
@@ -227,4 +226,17 @@ dialog#settings::backdrop{background:rgba(8,9,16,.6)}
 .tr-need .yes{color:var(--good)}
 .tr-card input[type=range]{width:100%;margin:0;accent-color:var(--acc)}
 .tr-sw{font-size:13px;color:var(--mute)}
-input[readonly]{opacity:.75;cursor:default}
+
+/* optimizer: the Titles (up to 3 cards) and the Weapon (1 card) share one row to save height.
+   The row uses the same column width as the item cards above, so everything lines up. #out is a size container so the row
+   can drop back to stacked sections when the panel has fewer than (titles + 1) columns. */
+#out{container-type:inline-size}
+.tw-row .sub{margin-top:0}
+.tw-row.n1{--nt:1}.tw-row.n2{--nt:2}.tw-row.n3{--nt:3}
+.tw-row.side{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:0 12px;align-items:start}
+.tw-row.side .tw-t{grid-column:span var(--nt)}
+.tw-row.side .tw-t .slots.cat-grid{grid-template-columns:repeat(var(--nt),minmax(0,1fr));gap:12px}
+/* narrower than (titles + 1) columns of 190px + gaps: stack the two sections again */
+@container (max-width:795px){.tw-row.n3{display:block}.tw-row.n3 .tw-t .slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
+@container (max-width:593px){.tw-row.n2{display:block}.tw-row.n2 .tw-t .slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
+@container (max-width:391px){.tw-row.n1{display:block}.tw-row.n1 .tw-t .slots.cat-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}}
